@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <sys/mman.h>
-#include "include.h"
 #include <sys/types.h>
 #include <unistd.h>
 #include <asm/unistd.h>
@@ -10,17 +9,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include "include.h"
 
 int flag = 1;
 
 void sig_handle_flag(int signo) { flag = 0; }
 
 int main(int argc, char *argv[]) {
-	char *p;
 	int i;
-	int ret;
-	int nr_hp = 2;
-	int nr_p  = nr_hp * HPS / PS;
+	int nr = 2;
+	char c;
+	char *p;
 	int just_reserve = 0;
 	int target_node = -1; /* -1 means 'all nodes' */
 	struct bitmask *all_nodes;
@@ -29,8 +28,9 @@ int main(int argc, char *argv[]) {
 	int mapflag = MAP_ANONYMOUS|MAP_HUGETLB;
 	int protflag = PROT_READ|PROT_WRITE;
 
-	/* printf("nr_nodes %d\n", nr_nodes); */
-	char c;
+	PS = getpagesize();
+	HPS = get_hugepagesize();
+
 	while ((c = getopt(argc, argv, "m:n:N:r")) != -1) {
 		switch(c) {
 		case 'm':
@@ -38,10 +38,11 @@ int main(int argc, char *argv[]) {
 				mapflag |= MAP_PRIVATE;
 			else if (!strcmp(optarg, "shared"))
 				mapflag |= MAP_SHARED;
+			else
+				errmsg("invalid optarg for -m\n");
 			break;
 		case 'n':
-			nr_hp = strtoul(optarg, NULL, 10);
-			nr_p  = nr_hp * HPS / PS;
+			nr = strtoul(optarg, NULL, 10);
 			break;
 		case 'N':
 			target_node = strtoul(optarg, NULL, 10);
@@ -54,6 +55,7 @@ int main(int argc, char *argv[]) {
 
 	if (nr_nodes < 2)
 		errmsg("A minimum of 2 nodes is required for this test.\n");
+
 	all_nodes = numa_bitmask_alloc(nr_nodes);
 	old_nodes = numa_bitmask_alloc(nr_nodes);
 	for (i = 0; i < nr_nodes; i++)
@@ -63,32 +65,24 @@ int main(int argc, char *argv[]) {
 			numa_bitmask_setbit(old_nodes, i);
 	else
 		numa_bitmask_setbit(old_nodes, target_node);
-
 	numa_sched_setaffinity(0, old_nodes);
-
 	signal(SIGUSR1, sig_handle);
-	p = mmap((void *)BASEVADDR, nr_hp * HPS, protflag, mapflag, -1, 0);
+	p = mmap((void *)BASEVADDR, nr * HPS, protflag, mapflag, -1, 0);
 	if (p == MAP_FAILED)
 		err("mmap");
-
 	if (just_reserve) {
 		printf("Waiting signal.\n");
 		pause();
 	} else {
-		for (i = 0; i < nr_p; i++)
-			p[i * PS] = 'a';
-
 		numa_sched_setaffinity(0, all_nodes);
-
 		printf("busy loop to check pageflags\n");
+		memset(p, 'a', nr * HPS);
 		signal(SIGUSR1, sig_handle_flag);
 		while (flag) {
 			sleep(1);
-			for (i = 0; i < nr_p; i++)
-				p[i * PS] = 'a';
+			memset(p, 'a', nr * HPS);
 		}
 	}
-
-	printf("Exit.\n");
+	printf("exit\n");
 	return 0;
 }

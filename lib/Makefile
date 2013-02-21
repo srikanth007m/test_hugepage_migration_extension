@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-g # -Wall -Wextra
 
-src=test1.c test2.c test_move_pages.c test_memory_offline.c page-types.c hog_hugepages.c
+src=test_alloc.c test_mbind.c test_move_pages.c test_memory_hotremove.c page-types.c hog_hugepages.c
 exe=$(src:.c=)
 srcdir=.
 dstdir=/usr/local/bin

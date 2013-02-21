@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <sys/mman.h>
-#include "include.h"
 #include <sys/types.h>
 #include <unistd.h>
 #include <asm/unistd.h>
@@ -10,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include "include.h"
 
 int flag = 1;
 
@@ -17,8 +17,7 @@ void sig_handle_flag(int signo) { flag = 0; }
 
 int main(int argc, char *argv[]) {
 	int i;
-	int nr_hp = 2;
-	int nr_p  = nr_hp * HPS / PS;
+	int nr = 2;
 	int ret;
 	char c;
 	char *p;
@@ -29,9 +28,6 @@ int main(int argc, char *argv[]) {
 	struct bitmask *all_nodes;
 	struct bitmask *old_nodes;
 	struct bitmask *new_nodes;
-	void **addrs;
-	int *status;
-	int *nodes;
 
 	PS = getpagesize();
 	HPS = get_hugepagesize();
@@ -56,8 +52,7 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case 'n':
-			nr_hp = strtoul(optarg, NULL, 10);
-			nr_p  = nr_hp * HPS / PS;
+			nr = strtoul(optarg, NULL, 10);
 			break;
 		case 'h':
 			HPS = strtoul(optarg, NULL, 10) * 1024;
@@ -82,30 +77,23 @@ int main(int argc, char *argv[]) {
 	numa_bitmask_setbit(old_nodes, 0);
 	numa_bitmask_setbit(new_nodes, 1);
 	numa_sched_setaffinity(0, old_nodes);
-	addrs  = malloc(sizeof(char *) * nr_p + 1);
-	status = malloc(sizeof(char *) * nr_p + 1);
-	nodes  = malloc(sizeof(char *) * nr_p + 1);
 	signal(SIGUSR1, sig_handle);
-	p = mmap((void *)BASEVADDR, nr_hp * HPS, protflag, mapflag, -1, 0);
+	p = mmap((void *)BASEVADDR, nr * HPS, protflag, mapflag, -1, 0);
 	if (p == MAP_FAILED)
 		err("mmap");
 	/* fault in */
-	memset(p, 'a', nr_hp * HPS);
-	write_pipe(pipe, "before move_pages\n");
+	memset(p, 'a', nr * HPS);
+	write_pipe(pipe, "before mbind\n");
 	pause();
 	numa_sched_setaffinity(0, all_nodes);
-	for (i = 0; i < nr_p; i++) {
-		addrs[i] = p + i * PS;
-		nodes[i] = 1;
-		status[i] = 0;
-	}
-	ret = numa_move_pages(0, nr_p, addrs, nodes, status, MPOL_MF_MOVE_ALL);
+	ret = mbind(p, nr * HPS, MPOL_BIND, new_nodes->maskp,
+		    new_nodes->size + 1, MPOL_MF_MOVE|MPOL_MF_STRICT);
 	if (ret == -1)
-		err("move_pages");
+		err("mbind");
 	signal(SIGUSR1, sig_handle_flag);
 	write_pipe(pipe, "entering busy loop\n");
 	while (flag)
-		memset(p, 'a', nr_hp * HPS);
+		memset(p, 'a', nr * HPS);
 	write_pipe(pipe, "exited busy loop\n");
 	pause();
 	return 0;

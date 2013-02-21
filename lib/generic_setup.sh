@@ -17,12 +17,11 @@ WDIR=$PWD/work
 TMPF=`mktemp --tmpdir=$WDIR`
 
 LDIR=$PWD/lib
+export PATH=${PATH}:${LDIR}
 PAGETYPES=$LDIR/page-types
 all_unpoison() { $PAGETYPES -b hwpoison,compound_tail=hwpoison -x -N; }
 all_unpoison
-fgMCEINJECT=$LDIR/mceinj.sh
-
-# sysctl vm.nr_hugepages=1000
+MCEINJECT=$LDIR/mceinj.sh
 
 BASEVFN=0x700000000
 
