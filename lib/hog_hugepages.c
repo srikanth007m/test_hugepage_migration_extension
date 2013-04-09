@@ -11,8 +11,11 @@
 #include <getopt.h>
 #include "include.h"
 
+#define ADDR_INPUT 0x700000000000
+
 int flag = 1;
 
+void sig_handle(int signo) { ; }
 void sig_handle_flag(int signo) { flag = 0; }
 
 int main(int argc, char *argv[]) {
@@ -28,10 +31,7 @@ int main(int argc, char *argv[]) {
 	int mapflag = MAP_ANONYMOUS|MAP_HUGETLB;
 	int protflag = PROT_READ|PROT_WRITE;
 
-	PS = getpagesize();
-	HPS = get_hugepagesize();
-
-	while ((c = getopt(argc, argv, "m:n:N:r")) != -1) {
+	while ((c = getopt(argc, argv, "m:p:n:N:r")) != -1) {
 		switch(c) {
 		case 'm':
 			if (!strcmp(optarg, "private"))
@@ -40,6 +40,15 @@ int main(int argc, char *argv[]) {
 				mapflag |= MAP_SHARED;
 			else
 				errmsg("invalid optarg for -m\n");
+			break;
+		case 'p':
+			testpipe = optarg;
+			{
+				struct stat stat;
+				lstat(testpipe, &stat);
+				if (!S_ISFIFO(stat.st_mode))
+					errmsg("Given file is not fifo.\n");
+			}
 			break;
 		case 'n':
 			nr = strtoul(optarg, NULL, 10);
@@ -67,15 +76,13 @@ int main(int argc, char *argv[]) {
 		numa_bitmask_setbit(old_nodes, target_node);
 	numa_sched_setaffinity(0, old_nodes);
 	signal(SIGUSR1, sig_handle);
-	p = mmap((void *)BASEVADDR, nr * HPS, protflag, mapflag, -1, 0);
-	if (p == MAP_FAILED)
-		err("mmap");
+	p = checked_mmap((void *)ADDR_INPUT, nr * HPS, protflag, mapflag, -1, 0);
 	if (just_reserve) {
-		printf("Waiting signal.\n");
+		pprintf("Waiting signal.\n");
 		pause();
 	} else {
 		numa_sched_setaffinity(0, all_nodes);
-		printf("busy loop to check pageflags\n");
+		pprintf("busy loop to check pageflags\n");
 		memset(p, 'a', nr * HPS);
 		signal(SIGUSR1, sig_handle_flag);
 		while (flag) {
@@ -83,6 +90,7 @@ int main(int argc, char *argv[]) {
 			memset(p, 'a', nr * HPS);
 		}
 	}
-	printf("exit\n");
+	pprintf("hog_hugepages exit\n");
+	pause();
 	return 0;
 }

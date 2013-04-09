@@ -11,8 +11,11 @@
 #include <stdlib.h>
 #include <getopt.h>
 
+#define ADDR_INPUT 0x700000000000
+
 int flag = 1;
 
+void sig_handle(int signo) { ; }
 void sig_handle_flag(int signo) { flag = 0; }
 
 int main(int argc, char *argv[]) {
@@ -22,7 +25,6 @@ int main(int argc, char *argv[]) {
 	int ret;
 	char c;
 	char *p;
-	char *pipe;
 	int mapflag = MAP_ANONYMOUS|MAP_HUGETLB;
 	int protflag = PROT_READ|PROT_WRITE;
 	unsigned long nr_nodes = numa_max_node() + 1; /* numa_num_possible_nodes(); */
@@ -33,10 +35,7 @@ int main(int argc, char *argv[]) {
 	int *status;
 	int *nodes;
 
-	PS = getpagesize();
-	HPS = get_hugepagesize();
-
-	while ((c = getopt(argc, argv, "m:p:n:h:")) != -1) {
+	while ((c = getopt(argc, argv, "m:p:n:h:N")) != -1) {
 		switch(c) {
 		case 'm':
 			if (!strcmp(optarg, "private"))
@@ -47,10 +46,10 @@ int main(int argc, char *argv[]) {
 				errmsg("invalid optarg for -m\n");
 			break;
 		case 'p':
-			pipe = optarg;
+			testpipe = optarg;
 			{
 				struct stat stat;
-				lstat(pipe, &stat);
+				lstat(testpipe, &stat);
 				if (!S_ISFIFO(stat.st_mode))
 					errmsg("Given file is not fifo.\n");
 			}
@@ -64,6 +63,9 @@ int main(int argc, char *argv[]) {
 			/* todo: arch independent */
 			if (HPS != 2097152 && HPS != 1073741824)
 				errmsg("Invalid hugepage size\n");
+			break;
+		case 'N':
+			mapflag &= ~MAP_HUGETLB;
 			break;
 		default:
 			errmsg("invalid option\n");
@@ -86,12 +88,12 @@ int main(int argc, char *argv[]) {
 	status = malloc(sizeof(char *) * nr_p + 1);
 	nodes  = malloc(sizeof(char *) * nr_p + 1);
 	signal(SIGUSR1, sig_handle);
-	p = mmap((void *)BASEVADDR, nr_hp * HPS, protflag, mapflag, -1, 0);
+	p = mmap((void *)ADDR_INPUT, nr_hp * HPS, protflag, mapflag, -1, 0);
 	if (p == MAP_FAILED)
 		err("mmap");
 	/* fault in */
 	memset(p, 'a', nr_hp * HPS);
-	write_pipe(pipe, "before move_pages\n");
+	pprintf("before move_pages\n");
 	pause();
 	numa_sched_setaffinity(0, all_nodes);
 	for (i = 0; i < nr_p; i++) {
@@ -103,10 +105,10 @@ int main(int argc, char *argv[]) {
 	if (ret == -1)
 		err("move_pages");
 	signal(SIGUSR1, sig_handle_flag);
-	write_pipe(pipe, "entering busy loop\n");
+	pprintf("entering busy loop\n");
 	while (flag)
 		memset(p, 'a', nr_hp * HPS);
-	write_pipe(pipe, "exited busy loop\n");
+	pprintf("exited busy loop\n");
 	pause();
 	return 0;
 }

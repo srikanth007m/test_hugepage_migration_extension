@@ -16,48 +16,22 @@ mkfifo ${PIPE} 2> /dev/null
 chmod a+x ${PIPE}
 ls -l ${PIPE}
 
-# do_test <test command> <test controller> <result checker>
-do_test() {
-    local cmd="$1"
-    local controller="$2"
-    local checker="$3"
-    local line=
-    local result=PASS
-
-    echo "------------------------------------------------------------"
-    echo $FUNCNAME $@
-
-    dmesg > ${TMPF}.dmesg1
-
-    # Keep pipe open to hold the data on buffer after the writer program
-    # is terminated.
-    exec {fd}<>${PIPE}
-    ( $cmd ) &
-    local pid=$!
-    while true ; do
-        if read -t5 line <> ${PIPE} ; then
-            echo $line
-            $controller $pid "$line"
-            if [ $? -eq 0 ] ; then
-                break
-            fi
-        else
-            echo "time out, abort test" >&2
-            kill -SIGINT $pid
-            result=TIMEOUT
-            break
-        fi
-    done
-
-    dmesg > ${TMPF}.dmesg2
-
-    $checker $result
-}
+TESTALLOC="${LDIR}/test_alloc"
+TESTMBIND="${LDIR}/test_mbind"
+TESTMOVEPAGES="${LDIR}/test_move_pages"
+TESTHOTREMOVE="${LDIR}/test_memory_hotremove"
 
 get_pagetypes() { ${PAGETYPES} $@; }
 get_numa_maps() { cat /proc/$1/numa_maps; }
 do_migratepages() { migratepages $1 0 1; }
 do_memory_hotremove() { ${LDIR}/memory_hotremove.sh ${PAGETYPES} $1; }
+
+prepare_test() {
+    true;
+}
+cleanup_test() {
+    true;
+}
 
 # reserve (total - 2) hugepages
 reserve_most_hugepages() {
@@ -158,7 +132,6 @@ migration_checker() {
 
 memory_hotremove_checker() {
     check_return_value "$1"
-    check_numa_maps
     check_pagetypes
     check_memory_hotremove
 }
@@ -214,4 +187,8 @@ check_memory_hotremove() {
     else
         count_failure "FAIL: `cat ${TMPF}.hotremove`."
     fi
+}
+
+check_none() {
+    true
 }

@@ -1,24 +1,27 @@
 #!/bin/bash
 
 HPSIZE=2048 # in kB
+TESTNAME=hugepage_migration
 
-. lib/generic_setup.sh
-. lib/test_setup.sh
+. lib/setup_generic.sh
+. lib/setup_test_core.sh
+. lib/setup_test_tools.sh
+. lib/setup_hugepage_migration_test.sh
 
 grep "numa=fake=" /proc/cmdline > /dev/null
 [ $? -ne 0 ] && echo "no numa node" >&2 && exit 1
 
-do_test "numactl --membind 0 test_alloc -m shared  -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
-do_test "numactl --membind 0 test_alloc -m private -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
+do_test 'migratepages shared'  "numactl --membind 0 ${TESTALLOC} -m shared   -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
+do_test 'migratepages private' "numactl --membind 0 ${TESTALLOC} -m private  -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
 
-do_test "numactl --membind 0 test_mbind -m shared  -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
-do_test "numactl --membind 0 test_mbind -m private -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
+do_test 'mbind migration shared'  "numactl --membind 0 ${TESTMBIND} -m shared  -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
+do_test 'mbind migration private' "numactl --membind 0 ${TESTMBIND} -m private -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
 
-do_test "numactl --membind 0 test_move_pages -m shared  -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
-do_test "numactl --membind 0 test_move_pages -m private -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
+do_test 'move_pages migration shared'  "numactl --membind 0 ${TESTMOVEPAGES} -m shared  -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
+do_test 'move_pages migration private' "numactl --membind 0 ${TESTMOVEPAGES} -m private -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
 
-do_test "test_memory_hotremove -m shared  -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
-do_test "test_memory_hotremove -m private -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
+do_test 'memory hotremove migration shared'  "${TESTHOTREMOVE} -m shared  -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
+do_test 'memory hotremove migration private' "${TESTHOTREMOVE} -m private -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
 
 # In each testcase test program tries to migrate 2 hugepages.
 # Now reserve (not allocate) (free hugepages - 2) hugepages to make allocating
@@ -26,17 +29,17 @@ do_test "test_memory_hotremove -m private -p ${PIPE} -h ${HPSIZE}" memory_hotrem
 trap 'pkill -f hog_hugepages' SIGINT
 reserve_most_hugepages &
 
-do_test "numactl --membind 0 test_alloc -m shared -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
-do_test "numactl --membind 0 test_alloc -m private -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
+do_test 'migratepages shared'  "numactl --membind 0 ${TESTALLOC} -m shared   -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
+do_test 'migratepages private' "numactl --membind 0 ${TESTALLOC} -m private  -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
 
-do_test "numactl --membind 0 test_mbind -m shared -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
-do_test "numactl --membind 0 test_mbind -m private -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
+do_test 'mbind migration shared'  "numactl --membind 0 ${TESTMBIND} -m shared  -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
+do_test 'mbind migration private' "numactl --membind 0 ${TESTMBIND} -m private -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
 
-do_test "numactl --membind 0 test_move_pages -m shared -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
-do_test "numactl --membind 0 test_move_pages -m private -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
+do_test 'move_pages migration shared'  "numactl --membind 0 ${TESTMOVEPAGES} -m shared  -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
+do_test 'move_pages migration private' "numactl --membind 0 ${TESTMOVEPAGES} -m private -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
 
-do_test "test_memory_hotremove -m shared -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
-do_test "test_memory_hotremove -m private -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
+do_test 'memory hotremove migration shared'  "${TESTHOTREMOVE} -m shared  -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
+do_test 'memory hotremove migration private' "${TESTHOTREMOVE} -m private -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
 
 pkill -f hog_hugepages
 
@@ -44,17 +47,17 @@ pkill -f hog_hugepages
 trap 'pkill -f hog_hugepages' SIGINT
 allocate_most_hugepages &
 
-do_test "numactl --membind 0 test_alloc -m shared -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
-do_test "numactl --membind 0 test_alloc -m private -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
+do_test 'migratepages shared'  "numactl --membind 0 ${TESTALLOC} -m shared   -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
+do_test 'migratepages private' "numactl --membind 0 ${TESTALLOC} -m private  -p ${PIPE} -h ${HPSIZE}" migratepages_controller migration_checker
 
-do_test "numactl --membind 0 test_mbind -m shared -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
-do_test "numactl --membind 0 test_mbind -m private -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
+do_test 'mbind migration shared'  "numactl --membind 0 ${TESTMBIND} -m shared  -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
+do_test 'mbind migration private' "numactl --membind 0 ${TESTMBIND} -m private -p ${PIPE} -h ${HPSIZE}" mbind_migration_controller migration_checker
 
-do_test "numactl --membind 0 test_move_pages -m shared -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
-do_test "numactl --membind 0 test_move_pages -m private -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
+do_test 'move_pages migration shared'  "numactl --membind 0 ${TESTMOVEPAGES} -m shared  -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
+do_test 'move_pages migration private' "numactl --membind 0 ${TESTMOVEPAGES} -m private -p ${PIPE} -h ${HPSIZE}" move_pages_controller migration_checker
 
-do_test "test_memory_hotremove -m shared -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
-do_test "test_memory_hotremove -m private -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
+do_test 'memory hotremove migration shared'  "${TESTHOTREMOVE} -m shared  -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
+do_test 'memory hotremove migration private' "${TESTHOTREMOVE} -m private -p ${PIPE} -h ${HPSIZE}" memory_hotremove_controller memory_hotremove_checker
 
 pkill -f hog_hugepages
 

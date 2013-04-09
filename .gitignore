@@ -1,0 +1,29 @@
+# We don't rely on git tracking
+# **
+**/tmp*
+**/Trash*
+
+# Exclude specific types of files (you should git-add manually if you want)
+**/*.doc
+**/*.xls
+**/*.ppt
+**/*.odt
+**/*.PDF
+**/*.pdf
+**/*.zip
+**/*.bz2
+**/*.tar.gz
+**/a.out
+
+# Ignore auto updated directory or private directory
+config_files
+pj/hack/utilities
+
+# Include all text and org files
+!**/*.txt
+!**/*.org
+
+# avoid adding new directories to add in tracking
+# /**/
+
+!.gitignore
