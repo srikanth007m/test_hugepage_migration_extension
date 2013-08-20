@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 	int ret;
 	char c;
 	char *p;
-	int mapflag = MAP_ANONYMOUS|MAP_HUGETLB;
+	int mapflag = MAP_ANONYMOUS;
 	int protflag = PROT_READ|PROT_WRITE;
 	unsigned long nr_nodes = numa_max_node() + 1; /* numa_num_possible_nodes(); */
 	struct bitmask *all_nodes;
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 	int *status;
 	int *nodes;
 
-	while ((c = getopt(argc, argv, "m:p:n:h:N")) != -1) {
+	while ((c = getopt(argc, argv, "m:p:n:h:")) != -1) {
 		switch(c) {
 		case 'm':
 			if (!strcmp(optarg, "private"))
@@ -59,13 +59,11 @@ int main(int argc, char *argv[]) {
 			nr_p  = nr_hp * HPS / PS;
 			break;
 		case 'h':
+			mapflag |= MAP_HUGETLB;
 			HPS = strtoul(optarg, NULL, 10) * 1024;
 			/* todo: arch independent */
 			if (HPS != 2097152 && HPS != 1073741824)
 				errmsg("Invalid hugepage size\n");
-			break;
-		case 'N':
-			mapflag &= ~MAP_HUGETLB;
 			break;
 		default:
 			errmsg("invalid option\n");

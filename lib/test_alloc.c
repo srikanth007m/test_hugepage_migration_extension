@@ -21,10 +21,10 @@ int main(int argc, char *argv[]) {
 	int nr = 2;
 	char c;
 	char *p;
-	int mapflag = MAP_ANONYMOUS|MAP_HUGETLB;
+	int mapflag = MAP_ANONYMOUS;
 	int protflag = PROT_READ|PROT_WRITE;
 
-	while ((c = getopt(argc, argv, "m:p:n:h:N")) != -1) {
+	while ((c = getopt(argc, argv, "m:p:n:h:")) != -1) {
 		switch(c) {
 		case 'm':
 			if (!strcmp(optarg, "private"))
@@ -48,12 +48,10 @@ int main(int argc, char *argv[]) {
 			break;
 		case 'h':
 			HPS = strtoul(optarg, NULL, 10) * 1024;
+			mapflag |= MAP_HUGETLB;
 			/* todo: arch independent */
 			if (HPS != 2097152 && HPS != 1073741824)
 				errmsg("Invalid hugepage size\n");
-			break;
-		case 'N':
-			mapflag &= ~MAP_HUGETLB;
 			break;
 		default:
 			errmsg("invalid option\n");
