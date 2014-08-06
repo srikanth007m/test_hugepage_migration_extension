@@ -113,6 +113,13 @@ function get_migratetype:long (val:long) %{
                     flags |= 1<<i;
     STAP_RETVALUE = flags;
 %}
+
+function get_hugepage_size:long (page:long) %{
+    struct page *page = (struct page *)STAP_ARG_page;
+    unsigned long hpsize = PAGE_SIZE << compound_order(page);
+    STAP_RETVALUE = hpsize;
+%}
+
 EOF
 
 echo_stp() { echo "$@" >> ${tmpf}.stp; }
@@ -132,9 +139,14 @@ cat <<EOF >> ${tmpf}.stp
 probe begin {
 }
 
-probe kernel.function("free_one_page") {
-    pfn = page_to_pfn(arg2());
-    $pb; printf(" pfn:%x, migtype:%x\n", pfn, arg4());
+probe kernel.function("migrate_pages").return {
+    $pb; printf(" ret %x\n", returnval());
+}
+
+probe kernel.function("new_node_page") {
+    page = arg1();
+    pagesize = get_hugepage_size(page);
+    $pb; printf(" pfn %x, size %x\n", page_to_pfn(page), pagesize);
 }
 
 # probe kernel.function("start_isolate_page_range") {

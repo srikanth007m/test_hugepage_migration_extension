@@ -1,0 +1,182 @@
+KERNEL_SRC=/src/linux-dev
+
+HPSIZE=2048
+
+. setup_hugepage_migration_test.sh
+
+DEFAULT_TEST_PREPARE=prepare_test
+DEFAULT_TEST_CLEANUP=cleanup_test
+DEFAULT_TEST_CONTROLLER=control_hugepage_migration
+DEFAULT_TEST_CHECKER=check_hugepage_migration
+
+TEST_TITLE="migratepages_shared"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_migratepages
+do_test_sync
+
+TEST_TITLE="migratepages_shared_reserved"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_migratepages
+TEST_PREPARE=prepare_test_reserve_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="migratepages_shared_allocated"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_migratepages
+TEST_PREPARE=prepare_test_allocate_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="migratepages_private"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_migratepages
+do_test_sync
+
+TEST_TITLE="migratepages_shared_reserved"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_migratepages
+TEST_PREPARE=prepare_test_reserve_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="migratepages_private_allocated"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTALLOC} -m private -h ${HPSIZE}"
+TEST_CONTROLLER=control_migratepages
+TEST_PREPARE=prepare_test_allocate_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+# mbind
+
+TEST_TITLE="mbind_migration_shared"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMBIND} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_mbind_migration
+do_test_sync
+
+TEST_TITLE="mbind_migration_shared_reserved"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMBIND} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_mbind_migration
+TEST_PREPARE=prepare_test_reserve_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="mbind_migration_shared_allocated"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMBIND} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_mbind_migration
+TEST_PREPARE=prepare_test_allocate_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="mbind_migration_private"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMBIND} -m private -h ${HPSIZE}"
+TEST_CONTROLLER=control_mbind_migration
+do_test_sync
+
+TEST_TITLE="mbind_migration_private_reserved"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMBIND} -m private -h ${HPSIZE}"
+TEST_CONTROLLER=control_mbind_migration
+TEST_PREPARE=prepare_test_reserve_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="mbind_migration_private_allocated"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMBIND} -m private -h ${HPSIZE}"
+TEST_CONTROLLER=control_mbind_migration
+TEST_PREPARE=prepare_test_allocate_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+# move_pages
+
+TEST_TITLE="move_pages_shared"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMOVEPAGES} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_move_pages
+do_test_sync
+
+TEST_TITLE="move_pages_shared_reserved"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMOVEPAGES} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_move_pages
+TEST_PREPARE=prepare_test_reserve_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="move_pages_shared_allocated"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMOVEPAGES} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_move_pages
+TEST_PREPARE=prepare_test_allocate_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="move_pages_private"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMOVEPAGES} -m private -h ${HPSIZE}"
+TEST_CONTROLLER=control_move_pages
+do_test_sync
+
+TEST_TITLE="move_pages_private_reserved"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMOVEPAGES} -m private -h ${HPSIZE}"
+TEST_CONTROLLER=control_move_pages
+TEST_PREPARE=prepare_test_reserve_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+TEST_TITLE="move_pages_private_allocated"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTMOVEPAGES} -m private -h ${HPSIZE}"
+TEST_CONTROLLER=control_move_pages
+TEST_PREPARE=prepare_test_allocate_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+do_test_sync
+
+# memory hotplug
+
+TEST_TITLE="memory_hotremove_migration_shared"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTHOTREMOVE} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_memory_hotremove_migration
+TEST_CHECKER=check_memory_hotremove_migration
+TEST_PREPARE=prepare_memory_hotremove_migration
+TEST_CLEANUP=cleanup_memory_hotremove_migration
+do_test_sync
+
+TEST_TITLE="memory_hotremove_migration_private"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTHOTREMOVE} -m private -h ${HPSIZE}"
+TEST_CONTROLLER=control_memory_hotremove_migration
+TEST_CHECKER=check_memory_hotremove_migration
+TEST_PREPARE=prepare_memory_hotremove_migration
+TEST_CLEANUP=cleanup_memory_hotremove_migration
+do_test_sync
+
+# race
+
+TEST_TITLE="race_migratepages_and_map_fault_unmap"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_CONTROLLER=control_race_migratepages_and_map_fault_unmap
+TEST_CHECKER=check_race_migratepages_and_map_fault_unmap
+do_test_async
+
+TEST_TITLE="race_move_pages_and_map_fault_unmap"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_CONTROLLER=control_race_move_pages_and_map_fault_unmap
+TEST_CHECKER=check_race_move_pages_and_map_fault_unmap
+TEST_PREPARE=prepare_race_move_pages_and_map_fault_unmap
+TEST_CLEANUP=cleanup_race_move_pages_and_map_fault_unmap
+do_test_async

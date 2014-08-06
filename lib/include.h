@@ -17,7 +17,7 @@
 #define PSIZE 4096
 #define PS PSIZE
 #define HPSIZE HPS;
-int HPS = 512 * 4096;
+unsigned long HPS = 512 * 4096;
 #define strpair(x) x, strlen(x)
 
 /* Control early_kill/late_kill */
