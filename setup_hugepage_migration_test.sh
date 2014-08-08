@@ -36,8 +36,14 @@ sysctl vm.nr_hugepages=$HPNUM
 NRHUGEPAGE=`cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages`
 [ "${NRHUGEPAGE}" -ne $HPNUM ] && echo "failed to allocate hugepage." >&2 && exit 1
 
-PAGETYPES=$(dirname $(readlink -f $BASH_SOURCE))/test_core/lib/page-types
-[ ! -x "$PAGETYPES" ] && echo "page-types not found." >&2 && exit 1
+PAGETYPES=${KERNEL_SRC}/tools/vm/page-types
+if [ ! -x "$PAGETYPES" ] ; then
+    make -C ${KERNEL_SRC}/tools vm
+    if [ $? -ne 0 ] ; then
+        echo "page-types not found." >&2
+        exit 1
+    fi
+fi
 
 # reserve (total - 2) hugepages
 reserve_most_hugepages() {
