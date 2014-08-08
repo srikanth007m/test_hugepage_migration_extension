@@ -8,7 +8,6 @@ OPT=-DDEBUG
 LIBOPT=-lpthread -lnuma # -lcgroup
 
 all: get_test_core $(exe)
-	@make all -C lib
 
 %: %.c
 	$(CC) $(CFLAGS) -o $@ $^ $(OPT) $(LIBOPT)
