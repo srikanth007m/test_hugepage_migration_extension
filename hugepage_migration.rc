@@ -16,19 +16,21 @@ TEST_CONTROLLER=control_migratepages
 do_test_sync
 
 TEST_TITLE="migratepages_shared_reserved"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
 TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
 TEST_CONTROLLER=control_migratepages
 TEST_PREPARE=prepare_test_reserve_hugepages
 TEST_CLEANUP=cleanup_test_hog_hugepages
+TEST_CHECKER=check_hugepage_migration_fail
 do_test_sync
 
 TEST_TITLE="migratepages_shared_allocated"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
 TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
 TEST_CONTROLLER=control_migratepages
 TEST_PREPARE=prepare_test_allocate_hugepages
 TEST_CLEANUP=cleanup_test_hog_hugepages
+TEST_CHECKER=check_hugepage_migration_fail
 do_test_sync
 
 TEST_TITLE="migratepages_private"
@@ -37,20 +39,38 @@ TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
 TEST_CONTROLLER=control_migratepages
 do_test_sync
 
-TEST_TITLE="migratepages_shared_reserved"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
+TEST_TITLE="migratepages_private_reserved"
+EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
+TEST_PROGRAM="${TESTALLOC} -m private -h ${HPSIZE}"
 TEST_CONTROLLER=control_migratepages
 TEST_PREPARE=prepare_test_reserve_hugepages
 TEST_CLEANUP=cleanup_test_hog_hugepages
+TEST_CHECKER=check_hugepage_migration_fail
 do_test_sync
 
 TEST_TITLE="migratepages_private_allocated"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
 TEST_PROGRAM="${TESTALLOC} -m private -h ${HPSIZE}"
 TEST_CONTROLLER=control_migratepages
 TEST_PREPARE=prepare_test_allocate_hugepages
 TEST_CLEANUP=cleanup_test_hog_hugepages
+TEST_CHECKER=check_hugepage_migration_fail
+do_test_sync
+
+TEST_TITLE="migratepages_shared_reserved_overcommit"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_migratepages
+TEST_PREPARE=prepare_test_reserve_hugepages_overcommit
+TEST_CLEANUP=cleanup_test_hog_hugepages_overcommit
+do_test_sync
+
+TEST_TITLE="migratepages_shared_allocated_overcommit"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_PROGRAM="${TESTALLOC} -m shared -h ${HPSIZE}"
+TEST_CONTROLLER=control_migratepages
+TEST_PREPARE=prepare_test_allocate_hugepages_overcommit
+TEST_CLEANUP=cleanup_test_hog_hugepages_overcommit
 do_test_sync
 
 # mbind
@@ -62,7 +82,7 @@ TEST_CONTROLLER=control_mbind_migration
 do_test_sync
 
 TEST_TITLE="mbind_migration_shared_reserved"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START KILLED"
 TEST_PROGRAM="${TESTMBIND} -m shared -h ${HPSIZE}"
 TEST_CONTROLLER=control_mbind_migration
 TEST_PREPARE=prepare_test_reserve_hugepages
@@ -70,7 +90,7 @@ TEST_CLEANUP=cleanup_test_hog_hugepages
 do_test_sync
 
 TEST_TITLE="mbind_migration_shared_allocated"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START KILLED"
 TEST_PROGRAM="${TESTMBIND} -m shared -h ${HPSIZE}"
 TEST_CONTROLLER=control_mbind_migration
 TEST_PREPARE=prepare_test_allocate_hugepages
@@ -84,7 +104,7 @@ TEST_CONTROLLER=control_mbind_migration
 do_test_sync
 
 TEST_TITLE="mbind_migration_private_reserved"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START KILLED"
 TEST_PROGRAM="${TESTMBIND} -m private -h ${HPSIZE}"
 TEST_CONTROLLER=control_mbind_migration
 TEST_PREPARE=prepare_test_reserve_hugepages
@@ -92,7 +112,7 @@ TEST_CLEANUP=cleanup_test_hog_hugepages
 do_test_sync
 
 TEST_TITLE="mbind_migration_private_allocated"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START KILLED"
 TEST_PROGRAM="${TESTMBIND} -m private -h ${HPSIZE}"
 TEST_CONTROLLER=control_mbind_migration
 TEST_PREPARE=prepare_test_allocate_hugepages
@@ -108,7 +128,7 @@ TEST_CONTROLLER=control_move_pages
 do_test_sync
 
 TEST_TITLE="move_pages_shared_reserved"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START KILLED"
 TEST_PROGRAM="${TESTMOVEPAGES} -m shared -h ${HPSIZE}"
 TEST_CONTROLLER=control_move_pages
 TEST_PREPARE=prepare_test_reserve_hugepages
@@ -116,7 +136,7 @@ TEST_CLEANUP=cleanup_test_hog_hugepages
 do_test_sync
 
 TEST_TITLE="move_pages_shared_allocated"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START KILLED"
 TEST_PROGRAM="${TESTMOVEPAGES} -m shared -h ${HPSIZE}"
 TEST_CONTROLLER=control_move_pages
 TEST_PREPARE=prepare_test_allocate_hugepages
@@ -130,7 +150,7 @@ TEST_CONTROLLER=control_move_pages
 do_test_sync
 
 TEST_TITLE="move_pages_private_reserved"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START KILLED"
 TEST_PROGRAM="${TESTMOVEPAGES} -m private -h ${HPSIZE}"
 TEST_CONTROLLER=control_move_pages
 TEST_PREPARE=prepare_test_reserve_hugepages
@@ -138,7 +158,7 @@ TEST_CLEANUP=cleanup_test_hog_hugepages
 do_test_sync
 
 TEST_TITLE="move_pages_private_allocated"
-EXPECTED_RETURN_CODE="START EXIT"
+EXPECTED_RETURN_CODE="START KILLED"
 TEST_PROGRAM="${TESTMOVEPAGES} -m private -h ${HPSIZE}"
 TEST_CONTROLLER=control_move_pages
 TEST_PREPARE=prepare_test_allocate_hugepages
@@ -147,9 +167,11 @@ do_test_sync
 
 # memory hotplug
 
+TOTAL_HPS=$(grep HugePages_Total: /proc/meminfo | sed "s/HugePages_Total: *//")
+
 TEST_TITLE="memory_hotremove_migration_shared"
 EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="${TESTHOTREMOVE} -m shared -h ${HPSIZE}"
+TEST_PROGRAM="${TESTHOTREMOVE} -m shared -n $[TOTAL_HPS - 100]"
 TEST_CONTROLLER=control_memory_hotremove_migration
 TEST_CHECKER=check_memory_hotremove_migration
 TEST_PREPARE=prepare_memory_hotremove_migration
@@ -158,7 +180,7 @@ do_test_sync
 
 TEST_TITLE="memory_hotremove_migration_private"
 EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="${TESTHOTREMOVE} -m private -h ${HPSIZE}"
+TEST_PROGRAM="${TESTHOTREMOVE} -m private -n $[TOTAL_HPS - 100]"
 TEST_CONTROLLER=control_memory_hotremove_migration
 TEST_CHECKER=check_memory_hotremove_migration
 TEST_PREPARE=prepare_memory_hotremove_migration

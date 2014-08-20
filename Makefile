@@ -1,4 +1,4 @@
-src=test_alloc.c test_mbind.c test_move_pages.c test_memory_hotremove.c hog_hugepages.c movepages.c hugepage.c
+src=test_alloc.c test_mbind.c test_move_pages.c test_memory_hotremove.c hog_hugepages.c movepages.c hugepage.c hugepage_for_hotremove.c
 exe=$(src:.c=)
 srcdir=.
 dstdir=/usr/local/bin

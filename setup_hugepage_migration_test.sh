@@ -27,8 +27,8 @@ TESTMBIND="`dirname $BASH_SOURCE`/test_mbind"
 [ ! -x "$TESTMBIND" ] && echo "test_mbind not found." >&2 && exit 1
 TESTMOVEPAGES="`dirname $BASH_SOURCE`/test_move_pages"
 [ ! -x "$TESTMOVEPAGES" ] && echo "test_move_pages not found." >&2 && exit 1
-TESTHOTREMOVE="`dirname $BASH_SOURCE`/test_memory_hotremove"
-[ ! -x "$TESTHOTREMOVE" ] && echo "test_memory_hotremove not found." >&2 && exit 1
+TESTHOTREMOVE="`dirname $BASH_SOURCE`/hugepage_for_hotremove"
+[ ! -x "$TESTHOTREMOVE" ] && echo "hugepage_for_hotremove not found." >&2 && exit 1
 HOGHUGEPAGES="`dirname $BASH_SOURCE`/hog_hugepages"
 [ ! -x "$HOGHUGEPAGES" ] && echo "hoge_hugepages not found." >&2 && exit 1
 
@@ -57,7 +57,7 @@ allocate_most_hugepages() {
 }
 
 stop_hog_hugepages() {
-    pkill -9 -f hog_hugepages
+    pkill -SIGUSR1 -f hog_hugepages
 }
 
 get_pagetypes() { ${PAGETYPES} $@; }
@@ -115,6 +115,10 @@ control_migratepages() {
             get_numa_maps ${pid}   > ${TMPF}.numa_maps1
             echo "do migratepages"
             do_migratepages ${pid}
+            if [ $? -ne 0 ] ; then
+                set_return_code MIGRATION_FAILED
+                echo "do_migratepages failed."
+            fi
             kill -SIGUSR1 $pid
             ;;
         "exited busy loop")
@@ -185,18 +189,33 @@ control_memory_hotremove_migration() {
 
     echo "$line" | tee -a ${OFILE}
     case "$line" in
-        "before memory_hotremove")
-            get_pagetypes -rNl -p ${pid} -b huge > ${TMPF}.pagetypes1
+        "before memory_hotremove"* )
+            echo $line | sed "s/before memory_hotremove: *//" > ${TMPF}.preferred_memblk
+            echo "preferred memory block: $targetmemblk" | tee -a ${OFILE}
+            get_pagetypes -p ${pid}
+            get_pagetypes -rNl -p ${pid} -b huge,compound_head=huge,compound_head > ${TMPF}.pagetypes1
             get_numa_maps ${pid} > ${TMPF}.numa_maps1
             kill -SIGUSR1 $pid
             ;;
         "entering busy loop")
-            echo "do memory hotplug"
-            do_memory_hotremove ${pid} > ${TMPF}.hotremove
+            echo "do memory hotplug ($(cat ${TMPF}.preferred_memblk))"
+            # grep MemTotal: /proc/meminfo
+            # cat /sys/devices/system/memory/memory*/state
+            # do_memory_hotremove ${pid} > ${TMPF}.hotremove
+            grep HugeP /proc/meminfo
+            echo "echo offline > /sys/devices/system/memory/memory$(cat ${TMPF}.preferred_memblk)/state"
+            echo offline > /sys/devices/system/memory/memory$(cat ${TMPF}.preferred_memblk)/state
+            if [ $? -ne 0 ] ; then
+                set_return_code MEMHOTREMOVE_FAILED
+                echo "do_memory_hotremove failed."
+            fi
+            # grep MemTotal: /proc/meminfo
+            # cat /sys/devices/system/memory/memory*/state
             kill -SIGUSR1 $pid
             ;;
         "exited busy loop")
-            get_pagetypes -rNl -p ${pid} -b huge > ${TMPF}.pagetypes2
+            get_pagetypes -p ${pid}
+            get_pagetypes -rNl -p ${pid} -b huge,compound_head=huge,compound_head > ${TMPF}.pagetypes2
             get_numa_maps ${pid} > ${TMPF}.numa_maps2
             kill -SIGUSR1 $pid
             set_return_code EXIT
@@ -214,11 +233,15 @@ check_hugepage_migration() {
     check_numa_maps
 }
 
+check_hugepage_migration_fail() {
+    check_kernel_message_nobug
+    check_return_code "${EXPECTED_RETURN_CODE}"
+}
+
 check_memory_hotremove_migration() {
     check_kernel_message_nobug
     check_return_code "${EXPECTED_RETURN_CODE}"
     check_pagetypes
-    check_memory_hotremove
 }
 
 check_numa_maps() {
@@ -236,21 +259,10 @@ check_numa_maps() {
 check_pagetypes() {
     count_testcount "CHECK page-types output"
     diff -u ${TMPF}.pagetypes1 ${TMPF}.pagetypes2 > ${TMPF}.pagetypes3 2> /dev/null
-    cat ${TMPF}.pagetypes3
     if [ -s ${TMPF}.pagetypes3 ] ; then
         count_success "hugepage is migrated."
     else
         count_failure "hugepage is not migrated."
-    fi
-}
-
-check_memory_hotremove() {
-    count_testcount "CHECK memory hotremove success"
-    grep offline ${TMPF}.hotremove > /dev/null
-    if [ $? -eq 0 ] ; then
-        count_success "memory block was hotremoved."
-    else
-        count_failure "`cat ${TMPF}.hotremove`."
     fi
 }
 
@@ -323,4 +335,22 @@ control_race_migratepages_and_map_fault_unmap() {
 check_race_migratepages_and_map_fault_unmap() {
     check_kernel_message_nobug
     check_return_code "${EXPECTED_RETURN_CODE}"
+}
+
+prepare_test_reserve_hugepages_overcommit() {
+    sysctl -q vm.nr_overcommit_hugepages=$[HPNUM + 10]
+    reserve_most_hugepages
+    prepare_test
+}
+
+prepare_test_allocate_hugepages_overcommit() {
+    sysctl -q vm.nr_overcommit_hugepages=$[HPNUM + 10]
+    allocate_most_hugepages
+    prepare_test
+}
+
+cleanup_test_hog_hugepages_overcommit() {
+    cleanup_test
+    stop_hog_hugepages
+    sysctl -q vm.nr_overcommit_hugepages=0
 }

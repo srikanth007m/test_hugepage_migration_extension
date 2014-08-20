@@ -79,8 +79,10 @@ int main(int argc, char *argv[]) {
                 err("set_mempolicy");
 
 	p = mmap((void *)ADDR_INPUT, nr * HPS, protflag, mapflag, -1, 0);
-	if (p == MAP_FAILED)
+	if (p == MAP_FAILED) {
+		pprintf("mmap failed\n");
 		err("mmap");
+	}
 	/* fault in */
 	memset(p, 'a', nr * HPS);
 	signal(SIGUSR1, sig_handle_flag);

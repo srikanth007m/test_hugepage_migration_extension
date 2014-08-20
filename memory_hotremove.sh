@@ -9,4 +9,6 @@ pfn=`${PAGETYPES} -p $pid -b huge,compound_head=huge,compound_head -Nl | cut -f2
 block=`ruby -e "p 0x${pfn} >> (${blockszshift} - 12)"`
 [ ! "$block" ] && echo "memory block not found." >&2 && exit 1
 echo offline > /sys/devices/system/memory/memory${block}/state
+ret=$?
 echo "block ${block} is `cat /sys/devices/system/memory/memory${block}/state`"
+exit $ret
