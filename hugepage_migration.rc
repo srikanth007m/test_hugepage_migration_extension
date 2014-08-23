@@ -202,3 +202,17 @@ TEST_CHECKER=check_race_move_pages_and_map_fault_unmap
 TEST_PREPARE=prepare_race_move_pages_and_map_fault_unmap
 TEST_CLEANUP=cleanup_race_move_pages_and_map_fault_unmap
 do_test_async
+
+# thp migration
+
+. setup_thp_migration_test.sh
+
+TEST_TITLE="thp_migration_auto_numa"
+EXPECTED_RETURN_CODE="START EXIT"
+NR_THPS=1
+TEST_PROGRAM="${TESTALLOCTHP} -n $NR_THPS"
+TEST_CONTROLLER=control_thp_migration_auto_numa
+TEST_CHECKER=check_thp_migration_auto_numa
+TEST_PREPARE=prepare_thp_migration_auto_numa
+TEST_CLEANUP=cleanup_thp_migration_auto_numa
+do_test_sync
