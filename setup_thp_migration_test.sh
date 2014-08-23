@@ -86,7 +86,7 @@ control_thp_migration_auto_numa() {
             # get_numa_maps ${pid}
             get_pagetypes -p $pid -Nl -a 0x700000000+$[NR_THPS * 512]
             # expecting numa balancing migration
-            sleep 3
+            sleep 1
             $NUMA_MAPS_RB $pid
             get_pagetypes -p $pid -Nl -a 0x700000000+$[NR_THPS * 512]
             kill -SIGUSR1 $pid
@@ -131,7 +131,6 @@ prepare_thp_migration_auto_numa() {
     sysctl vm.nr_hugepages=0
     prepare_test
 
-    default_tuning_parameters
     # numa balancing should be enabled
     echo 1 > /proc/sys/kernel/numa_balancing
     echo 1 > /proc/sys/kernel/numa_balancing_scan_delay_ms

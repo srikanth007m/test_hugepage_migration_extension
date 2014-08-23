@@ -22,6 +22,19 @@ int flag = 1;
 void sig_handle(int signo) { ; }
 void sig_handle_flag(int signo) { flag = 0; }
 
+void set_cpu_affinity(int cpu) {
+	int ret;
+	cpu_set_t cpuset;
+
+	CPU_ZERO(&cpuset);
+	CPU_SET(cpu, &cpuset);
+	pprintf("current CPU %d\n", sched_getcpu());
+	ret = sched_setaffinity(0, sizeof(cpuset), &cpuset);
+	if (ret == -1)
+		err("sched_setaffinity");
+	pprintf("current CPU %d\n", sched_getcpu());
+}
+
 int main(int argc, char *argv[]) {
 	int i;
 	int nr = 2;
@@ -33,7 +46,6 @@ int main(int argc, char *argv[]) {
         unsigned long nr_nodes = numa_max_node() + 1;
         unsigned long nodemask;
 	int ret;
-	cpu_set_t *cpuset;
 
 	while ((c = getopt(argc, argv, "vp:n:")) != -1) {
 		switch(c) {
@@ -81,47 +93,17 @@ int main(int argc, char *argv[]) {
 	}
 	pprintf("mmap ok\n");
 
-	cpuset = CPU_ALLOC(numa_num_configured_cpus());
-	if (!cpuset)
-		err("CPU_ALLOC");
-	CPU_ZERO(cpuset);
-	CPU_SET(0, cpuset);
-	pprintf("current CPU %d\n", sched_getcpu());
-	ret = sched_setaffinity(0,
-				CPU_ALLOC_SIZE(numa_num_configured_cpus()),
-				cpuset);
-	if (ret == -1)
-		err("sched_setaffinity");
-	pprintf("current CPU %d\n", sched_getcpu());
+	set_cpu_affinity(0);
 
-	/* nodemask = 1; /\* set only on node 0. *\/ */
-	/* ret = mbind(p, nr * HPS, MPOL_BIND, &nodemask, */
-	/* 	    nr_nodes, MPOL_MF_MOVE_ALL); */
-	/* if (ret == -1) */
-	/* 	err("mbind"); */
 	pprintf("do madvise(MADV_HUGEPAGE)\n");
 	ret = madvise(p, nr * HPS, MADV_HUGEPAGE);
 	if (ret == -1)
 		err("madvise");
 	/* fault in */
 	memset(p, 'a', nr * HPS);
-	/* pprintf("set mempolicy to default\n"); */
-	/* pause(); */
-	/* ret = mbind(p, nr * HPS, MPOL_DEFAULT, NULL, */
-	/* 	    0, MPOL_MF_MOVE_ALL); */
-	/* if (ret == -1) */
-	/* 	err("mbind"); */
 	signal(SIGUSR1, sig_handle_flag);
 
-	CPU_ZERO(cpuset);
-	CPU_SET(1, cpuset);
-	pprintf("current CPU %d\n", sched_getcpu());
-	ret = sched_setaffinity(0,
-				CPU_ALLOC_SIZE(numa_num_configured_cpus()),
-				cpuset);
-	if (ret == -1)
-		err("sched_setaffinity");
-	pprintf("current CPU %d\n", sched_getcpu());
+	set_cpu_affinity(1);
 
 	pprintf("entering busy loop\n");
 	while (flag) {
