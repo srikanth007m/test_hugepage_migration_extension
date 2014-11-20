@@ -203,6 +203,7 @@ control_memory_hotremove_migration() {
             # cat /sys/devices/system/memory/memory*/state
             # do_memory_hotremove ${pid} > ${TMPF}.hotremove
             grep HugeP /proc/meminfo
+            cat /sys/devices/system/node/node*/hugepages/hugepages-2048kB/free_hugepages
             echo "echo offline > /sys/devices/system/memory/memory$(cat ${TMPF}.preferred_memblk)/state"
             echo offline > /sys/devices/system/memory/memory$(cat ${TMPF}.preferred_memblk)/state
             if [ $? -ne 0 ] ; then
