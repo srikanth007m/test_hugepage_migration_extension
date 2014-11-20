@@ -10,6 +10,12 @@ NUMNODE=$(numactl -H | grep available | cut -f2 -d' ')
 TESTALLOCTHP="`dirname $BASH_SOURCE`/test_alloc_thp"
 [ ! -x "$TESTALLOC" ] && echo "test_alloc_thp not found." >&2 && exit 1
 
+TESTMLOCKONSHAREDTHP="`dirname $BASH_SOURCE`/test_mlock_on_shared_thp"
+[ ! -x "$TESTMLOCKONSHAREDTHP" ] && echo "test_mlock_on_shared_thp not found." >&2 && exit 1
+
+TESTMPROTECTONSHAREDTHP="`dirname $BASH_SOURCE`/test_mprotect_on_shared_thp"
+[ ! -x "$TESTMPROTECTONSHAREDTHP" ] && echo "test_mprotect_on_shared_thp not found." >&2 && exit 1
+
 NUMA_MAPS_RB="`dirname $BASH_SOURCE`/numa_maps.rb"
 [ ! -x "$NUMA_MAPS_RB" ] && echo "numa_maps.rb not found." >&2 && exit 1
 
@@ -145,5 +151,130 @@ cleanup_thp_migration_auto_numa() {
     echo 60000 > /proc/sys/kernel/numa_balancing_scan_period_max_ms
     echo 1000 > /proc/sys/kernel/numa_balancing_scan_period_min_ms
     echo 256 > /proc/sys/kernel/numa_balancing_scan_size_mb
+    cleanup_test
+}
+
+control_mlock_on_shared_thp() {
+    local pid="$1"
+    local line="$2"
+
+    echo "$line" | tee -a ${OFILE}
+    case "$line" in
+        "before fork")
+            echo "pid: $pid" | tee -a ${OFILE}
+            get_pagetypes -p $pid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                | sed 's/^/  /' | tee -a ${OFILE}
+            kill -SIGUSR1 $pid
+            ;;
+        "check shared thp")
+            for ppid in $(pgrep -f $TESTMLOCKONSHAREDTHP) ; do
+                echo "pid: $ppid ---" | tee -a ${OFILE}
+                get_pagetypes -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                    | sed 's/^/  /' | tee -a ${OFILE}
+            done
+            for ppid in $(pgrep -f $TESTMLOCKONSHAREDTHP) ; do
+                kill -SIGUSR1 $ppid
+            done
+            ;;
+        "exited busy loop")
+            for ppid in $(pgrep -f $TESTMLOCKONSHAREDTHP) ; do
+                echo "pid: $ppid ---" | tee -a ${OFILE}
+                get_pagetypes -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                    | sed 's/^/  /' | tee -a ${OFILE}
+            done
+            for ppid in $(pgrep -f $TESTMLOCKONSHAREDTHP) ; do
+                kill -SIGUSR1 $ppid
+            done
+            set_return_code EXIT
+            return 0
+            ;;
+        *)
+            ;;
+    esac
+    return 1
+}
+
+check_mlock_on_shared_thp() {
+    check_kernel_message_nobug
+    check_return_code "${EXPECTED_RETURN_CODE}"
+}
+
+prepare_mlock_on_shared_thp() {
+    sysctl vm.nr_hugepages=0
+    prepare_test
+}
+
+cleanup_mlock_on_shared_thp() {
+    cleanup_test
+}
+
+get_vma_protection() {
+    local pid=$1
+    grep -A 2 700000000000 /proc/$pid/maps
+}
+
+CHECKED=
+
+control_mprotect_on_shared_thp() {
+    local pid="$1"
+    local line="$2"
+
+    echo "$line" | tee -a ${OFILE}
+    case "$line" in
+        "before fork")
+            echo "pid: $pid" | tee -a ${OFILE}
+            get_pagetypes -p $pid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                | sed 's/^/  /' | tee -a ${OFILE}
+            get_vma_protection $pid
+            kill -SIGUSR1 $pid
+            ;;
+        "just before mprotect")
+            if [ "$CHECKED" != true ] ; then
+                sleep 0.1
+                CHECKED=true
+                for ppid in $(pgrep -f $TESTMPROTECTONSHAREDTHP) ; do
+                    echo "pid: $ppid ---" | tee -a ${OFILE}
+                    get_pagetypes -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                        | sed 's/^/  /' | tee -a ${OFILE}
+                    get_vma_protection $ppid
+                done
+                kill -SIGUSR1 $pid
+            fi
+            ;;
+        "mprotect done")
+            sleep 0.1
+            for ppid in $(pgrep -f $TESTMPROTECTONSHAREDTHP) ; do
+                echo "pid: $ppid ---" | tee -a ${OFILE}
+                get_pagetypes -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                    | sed 's/^/  /' | tee -a ${OFILE}
+                get_vma_protection $ppid
+            done
+            for ppid in $(pgrep -f $TESTMPROTECTONSHAREDTHP) ; do
+                if [ "$ppid" = "$pid" ] ; then
+                    kill -SIGUSR1 $ppid
+                else
+                    kill -9 $ppid
+                fi
+            done
+            set_return_code EXIT
+            return 0
+            ;;
+        *)
+            ;;
+    esac
+    return 1
+}
+
+check_mprotect_on_shared_thp() {
+    check_kernel_message_nobug
+    check_return_code "${EXPECTED_RETURN_CODE}"
+}
+
+prepare_mprotect_on_shared_thp() {
+    sysctl vm.nr_hugepages=0
+    prepare_test
+}
+
+cleanup_mprotect_on_shared_thp() {
     cleanup_test
 }
