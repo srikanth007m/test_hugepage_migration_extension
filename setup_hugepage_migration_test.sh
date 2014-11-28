@@ -31,6 +31,8 @@ TESTHOTREMOVE="`dirname $BASH_SOURCE`/hugepage_for_hotremove"
 [ ! -x "$TESTHOTREMOVE" ] && echo "hugepage_for_hotremove not found." >&2 && exit 1
 HOGHUGEPAGES="`dirname $BASH_SOURCE`/hog_hugepages"
 [ ! -x "$HOGHUGEPAGES" ] && echo "hoge_hugepages not found." >&2 && exit 1
+MADVISE_ALL="`dirname $BASH_SOURCE`/madvise_all_hugepages"
+[ ! -x "$MADVISE_ALL" ] && echo "madvise_all_hugepages not found." >&2 && exit 1
 
 sysctl vm.nr_hugepages=$HPNUM
 NRHUGEPAGE=`cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages`
@@ -199,8 +201,6 @@ control_memory_hotremove_migration() {
             ;;
         "entering busy loop")
             echo "do memory hotplug ($(cat ${TMPF}.preferred_memblk))"
-            # grep MemTotal: /proc/meminfo
-            # cat /sys/devices/system/memory/memory*/state
             # do_memory_hotremove ${pid} > ${TMPF}.hotremove
             grep HugeP /proc/meminfo
             cat /sys/devices/system/node/node*/hugepages/hugepages-2048kB/free_hugepages
@@ -210,8 +210,6 @@ control_memory_hotremove_migration() {
                 set_return_code MEMHOTREMOVE_FAILED
                 echo "do_memory_hotremove failed."
             fi
-            # grep MemTotal: /proc/meminfo
-            # cat /sys/devices/system/memory/memory*/state
             kill -SIGUSR1 $pid
             ;;
         "exited busy loop")
@@ -354,4 +352,51 @@ cleanup_test_hog_hugepages_overcommit() {
     cleanup_test
     stop_hog_hugepages
     sysctl -q vm.nr_overcommit_hugepages=0
+}
+
+control_race_gup_and_migration() {
+    local pid="$1"
+    local line="$2"
+
+    echo "$line" | tee -a ${OFILE}
+    case "$line" in
+        "prepared hugepages")
+            $PAGETYPES -p $pid -a 0x700000000+$[512 * 1000]
+            get_numa_maps $pid | grep "^700000000000 "
+            kill -SIGUSR1 $pid
+            # madvise_all_hugepages iterate to call madvise() over hugepages
+            echo "start migration"
+            for i in $(seq 3) ; do
+                migratepages $pid 0 1
+                get_numa_maps $pid | grep "^700000000000 "
+                migratepages $pid 1 0
+                get_numa_maps $pid | grep "^700000000000 "
+            done
+            echo "migration done"
+            kill -SIGUSR1 $pid
+            ;;
+        "exit")
+            kill -SIGUSR1 $pid
+            set_return_code EXIT
+            return 0
+            ;;
+        *)
+            ;;
+    esac
+    return 1
+}
+
+prepare_race_gup_and_migration() {
+    sysctl vm.nr_hugepages=0
+    sysctl vm.nr_hugepages=$HPNUM
+    prepare_test
+}
+
+cleanup_race_gup_and_migration() {
+    cleanup_test
+}
+
+check_race_gup_and_migration() {
+    check_kernel_message_nobug
+    check_return_code "${EXPECTED_RETURN_CODE}"
 }

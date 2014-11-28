@@ -169,9 +169,15 @@ do_test_sync
 
 TOTAL_HPS=$(grep HugePages_Total: /proc/meminfo | sed "s/HugePages_Total: *//")
 
+# need to escape * from being extraced to file list
+NR_FILLED_HPS=$(eval echo "$TOTAL_HPS \\* 80 / 100" | bc)
+
+# These testcase takes longer if we have many hugeapges.
+PIPETIMEOUT=30
+
 TEST_TITLE="memory_hotremove_migration_shared"
 EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="${TESTHOTREMOVE} -m shared -n $[TOTAL_HPS - 100]"
+TEST_PROGRAM="${TESTHOTREMOVE} -m shared -n $NR_FILLED_HPS"
 TEST_CONTROLLER=control_memory_hotremove_migration
 TEST_CHECKER=check_memory_hotremove_migration
 TEST_PREPARE=prepare_memory_hotremove_migration
@@ -180,12 +186,14 @@ do_test_sync
 
 TEST_TITLE="memory_hotremove_migration_private"
 EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="${TESTHOTREMOVE} -m private -n $[TOTAL_HPS - 100]"
+TEST_PROGRAM="${TESTHOTREMOVE} -m private -n $NR_FILLED_HPS"
 TEST_CONTROLLER=control_memory_hotremove_migration
 TEST_CHECKER=check_memory_hotremove_migration
 TEST_PREPARE=prepare_memory_hotremove_migration
 TEST_CLEANUP=cleanup_memory_hotremove_migration
 do_test_sync
+
+PIPETIMEOUT=5
 
 # race
 
@@ -202,6 +210,16 @@ TEST_CHECKER=check_race_move_pages_and_map_fault_unmap
 TEST_PREPARE=prepare_race_move_pages_and_map_fault_unmap
 TEST_CLEANUP=cleanup_race_move_pages_and_map_fault_unmap
 do_test_async
+
+TEST_TITLE="race_gup_and_migration"
+TEST_PROGRAM="${MADVISE_ALL} -m shared -n $[HPNUM - 100] -h 2048"
+TEST_PROGRAM="${MADVISE_ALL} -m shared -n 100 -h 2048"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_CONTROLLER=control_$TEST_TITLE
+TEST_CHECKER=check_$TEST_TITLE
+TEST_PREPARE=prepare_$TEST_TITLE
+TEST_CLEANUP=cleanup_$TEST_TITLE
+do_test_sync
 
 # thp migration
 

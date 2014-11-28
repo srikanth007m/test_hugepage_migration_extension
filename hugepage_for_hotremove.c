@@ -72,14 +72,15 @@ int main(int argc, char *argv[]) {
 	if (!pfns)
 		err("malloc");
 	memset(pfns, 0, nr_hp * sizeof(unsigned long));
+	for (i = 0; i < MAX_MEMBLK; i++)
+		nr_hps_per_memblk[i] = 0;
 	for (i = 0; i < nr_hp; i++) {
 		pfns[i] = get_my_pfn(&p[i * HPS]);
 		nr_hps_per_memblk[pfns[i] >> MEMBLK_ORDER] += 1;
 	}
-	for (i = 0; i < nr_hp; i++) {
-		if (nr_hps_per_memblk[i] > 0) {
+	for (i = 0; i < MAX_MEMBLK; i++) {
+		if (verbose && nr_hps_per_memblk[i] > 0)
 			printf("memblock %d: hps %d\n", i, nr_hps_per_memblk[i]);
-		}
 		if (nr_hps_per_memblk[i] > max_nr_hps) {
 			max_nr_hps = nr_hps_per_memblk[i];
 			preferred_memblk = i;
@@ -88,8 +89,10 @@ int main(int argc, char *argv[]) {
 
 	/* unmap all hugepages except ones in preferred_memblk */
 	for (i = 0; i < nr_hp; i++)
-		if (pfns[i] >> MEMBLK_ORDER != preferred_memblk)
+		if (pfns[i] >> MEMBLK_ORDER != preferred_memblk) {
 			checked_munmap(&p[i * HPS], HPS);
+			printf("munmap %d %lx\n", i, (unsigned long)&p[i*HPS]);
+		}
 
 	pprintf("before memory_hotremove: %d\n", preferred_memblk);
 	pause();
