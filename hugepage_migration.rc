@@ -212,8 +212,7 @@ TEST_CLEANUP=cleanup_race_move_pages_and_map_fault_unmap
 do_test_async
 
 TEST_TITLE="race_gup_and_migration"
-TEST_PROGRAM="${MADVISE_ALL} -m shared -n $[HPNUM - 100] -h 2048"
-TEST_PROGRAM="${MADVISE_ALL} -m shared -n 100 -h 2048"
+TEST_PROGRAM="${MADVISE_ALL} -m private -u -n 100 -h 2048 -l 10"
 EXPECTED_RETURN_CODE="START EXIT"
 TEST_CONTROLLER=control_$TEST_TITLE
 TEST_CHECKER=check_$TEST_TITLE

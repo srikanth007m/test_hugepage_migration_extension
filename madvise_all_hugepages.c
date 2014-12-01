@@ -17,6 +17,7 @@
 
 int flag = 1;
 
+void sig_handle(int signo) { ; }
 void sig_handle_flag(int signo) { flag = 0; }
 
 int main(int argc, char *argv[]) {
@@ -30,8 +31,10 @@ int main(int argc, char *argv[]) {
         unsigned long nr_nodes = numa_max_node() + 1;
         struct bitmask *new_nodes;
         unsigned long nodemask;
+	int do_unpoison = 0;
+	int loop = 3;
 
-	while ((c = getopt(argc, argv, "vp:m:n:h:")) != -1) {
+	while ((c = getopt(argc, argv, "vp:m:n:ul:h:")) != -1) {
 		switch(c) {
                 case 'v':
                         verbose = 1;
@@ -56,6 +59,12 @@ int main(int argc, char *argv[]) {
 		case 'n':
 			nr = strtoul(optarg, NULL, 10);
 			break;
+		case 'u':
+			do_unpoison = 1;
+			break;
+		case 'l':
+			loop = strtoul(optarg, NULL, 10);
+			break;
 		case 'h':
 			HPS = strtoul(optarg, NULL, 10) * 1024;
 			mapflag |= MAP_HUGETLB;
@@ -79,21 +88,31 @@ int main(int argc, char *argv[]) {
         if (set_mempolicy(MPOL_BIND, &nodemask, nr_nodes) == -1)
                 err("set_mempolicy");
 
-	p = mmap((void *)ADDR_INPUT, nr * HPS, protflag, mapflag, -1, 0);
-	if (p == MAP_FAILED) {
-		pprintf("mmap failed\n");
-		err("mmap");
-	}
-	/* fault in */
-	memset(p, 'a', nr * HPS);
+	signal(SIGUSR2, sig_handle);
+	pprintf("start background migration\n");
+	pause();
+
 	signal(SIGUSR1, sig_handle_flag);
-	pprintf("prepared hugepages\n");
+	pprintf("hugepages prepared\n");
+
 	while (flag) {
+		p = checked_mmap((void *)ADDR_INPUT, nr * HPS, protflag, mapflag, -1, 0);
+		/* fault in */
+		memset(p, 'a', nr * HPS);
 		for (i = 0; i < nr; i++) {
 			ret = madvise(p + i * HPS, 4096, MADV_HWPOISON);
-			if (ret)
+			if (ret) {
+				perror("madvise");
 				pprintf("madvise returned %d\n", ret);
+			}
 		}
+		if (do_unpoison) {
+			pprintf("need unpoison\n");
+			pause();
+		}
+		checked_munmap(p, nr * HPS);
+		if (loop-- <= 0)
+			break;
 	}
 	pprintf("exit\n");
 	pause();

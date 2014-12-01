@@ -354,29 +354,25 @@ cleanup_test_hog_hugepages_overcommit() {
     sysctl -q vm.nr_overcommit_hugepages=0
 }
 
+BG_MIGRATION_PID=
 control_race_gup_and_migration() {
     local pid="$1"
     local line="$2"
 
     echo "$line" | tee -a ${OFILE}
     case "$line" in
-        "prepared hugepages")
-            $PAGETYPES -p $pid -a 0x700000000+$[512 * 1000]
-            get_numa_maps $pid | grep "^700000000000 "
-            kill -SIGUSR1 $pid
-            # madvise_all_hugepages iterate to call madvise() over hugepages
-            echo "start migration"
-            for i in $(seq 3) ; do
-                migratepages $pid 0 1
-                get_numa_maps $pid | grep "^700000000000 "
-                migratepages $pid 1 0
-                get_numa_maps $pid | grep "^700000000000 "
-            done
-            echo "migration done"
-            kill -SIGUSR1 $pid
+        "need unpoison")
+            $PAGETYPES -b hwpoison,huge,compound_head=hwpoison,huge,compound_head -x -N
+            kill -SIGUSR2 $pid
+            ;;
+        "start background migration")
+            run_background_migration $pid &
+            BG_MIGRATION_PID=$!
+            kill -SIGUSR2 $pid
             ;;
         "exit")
             kill -SIGUSR1 $pid
+            kill -SIGKILL "$BG_MIGRATION_PID"
             set_return_code EXIT
             return 0
             ;;
@@ -386,6 +382,16 @@ control_race_gup_and_migration() {
     return 1
 }
 
+run_background_migration() {
+    local tp_pid=$1
+    while true ; do
+        migratepages $tp_pid 0 1 2> /dev/null
+        get_numa_maps $tp_pid    2> /dev/null | grep " huge "
+        migratepages $tp_pid 1 0 2> /dev/null
+        get_numa_maps $tp_pid    2> /dev/null | grep " huge "
+    done
+}
+
 prepare_race_gup_and_migration() {
     sysctl vm.nr_hugepages=0
     sysctl vm.nr_hugepages=$HPNUM
@@ -393,6 +399,8 @@ prepare_race_gup_and_migration() {
 }
 
 cleanup_race_gup_and_migration() {
+    $PAGETYPES -b hwpoison,huge,compound_head=hwpoison,huge,compound_head -x -N
+    kill -9 $BG_MIGRATION_PID
     cleanup_test
 }
 
