@@ -36,15 +36,9 @@ MADVISE_ALL="`dirname $BASH_SOURCE`/madvise_all_hugepages"
 
 sysctl vm.nr_hugepages=$HPNUM
 NRHUGEPAGE=`cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages`
-[ "${NRHUGEPAGE}" -ne $HPNUM ] && echo "failed to allocate hugepage." >&2 && exit 1
-
-PAGETYPES=${KERNEL_SRC}/tools/vm/page-types
-if [ ! -x "$PAGETYPES" ] ; then
-    make -C ${KERNEL_SRC}/tools vm
-    if [ $? -ne 0 ] ; then
-        echo "page-types not found." >&2
-        exit 1
-    fi
+if [ "${NRHUGEPAGE}" -ne $HPNUM ] ; then
+    echo "Set vm.nr_hugepages=100, but current size is $NRHUGEPAGE," >&2
+    echo "it could make later tests fail." >&2
 fi
 
 # reserve (total - 2) hugepages
