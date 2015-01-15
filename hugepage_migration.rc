@@ -202,6 +202,7 @@ TEST_TITLE="race_migratepages_and_map_fault_unmap"
 EXPECTED_RETURN_CODE="START EXIT"
 TEST_CONTROLLER=control_race_migratepages_and_map_fault_unmap
 TEST_CHECKER=check_race_migratepages_and_map_fault_unmap
+TEST_FLAGS=devel
 do_test_async
 
 TEST_TITLE="race_move_pages_and_map_fault_unmap"
@@ -210,6 +211,7 @@ TEST_CONTROLLER=control_race_move_pages_and_map_fault_unmap
 TEST_CHECKER=check_race_move_pages_and_map_fault_unmap
 TEST_PREPARE=prepare_race_move_pages_and_map_fault_unmap
 TEST_CLEANUP=cleanup_race_move_pages_and_map_fault_unmap
+TEST_FLAGS=devel
 do_test_async
 
 TEST_TITLE="race_gup_and_migration"
@@ -219,6 +221,7 @@ TEST_CONTROLLER=control_$TEST_TITLE
 TEST_CHECKER=check_$TEST_TITLE
 TEST_PREPARE=prepare_$TEST_TITLE
 TEST_CLEANUP=cleanup_$TEST_TITLE
+TEST_FLAGS=devel
 do_test_sync
 
 # thp migration
@@ -233,6 +236,7 @@ TEST_CONTROLLER=control_thp_migration_auto_numa
 TEST_CHECKER=check_thp_migration_auto_numa
 TEST_PREPARE=prepare_thp_migration_auto_numa
 TEST_CLEANUP=cleanup_thp_migration_auto_numa
+TEST_FLAGS=devel
 do_test_sync
 
 TEST_TITLE="mlock_on_shared_thp"
@@ -243,6 +247,7 @@ TEST_CONTROLLER=control_$TEST_TITLE
 TEST_CHECKER=check_$TEST_TITLE
 TEST_PREPARE=prepare_$TEST_TITLE
 TEST_CLEANUP=cleanup_$TEST_TITLE
+TEST_FLAGS=devel
 do_test_sync
 
 TEST_TITLE="mprotect_on_shared_thp"
@@ -253,6 +258,7 @@ TEST_CONTROLLER=control_mprotect_on_shared_thp
 TEST_CHECKER=check_mprotect_on_shared_thp
 TEST_PREPARE=prepare_mprotect_on_shared_thp
 TEST_CLEANUP=cleanup_mprotect_on_shared_thp
+TEST_FLAGS=devel
 do_test_sync
 
 TEST_TITLE="mprotect_on_shared_thp_unaligned"
@@ -263,4 +269,5 @@ TEST_CONTROLLER=control_mprotect_on_shared_thp
 TEST_CHECKER=check_mprotect_on_shared_thp
 TEST_PREPARE=prepare_mprotect_on_shared_thp
 TEST_CLEANUP=cleanup_mprotect_on_shared_thp
+TEST_FLAGS=devel
 do_test_sync
