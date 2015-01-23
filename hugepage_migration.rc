@@ -271,3 +271,31 @@ TEST_PREPARE=prepare_mprotect_on_shared_thp
 TEST_CLEANUP=cleanup_mprotect_on_shared_thp
 TEST_FLAGS=devel
 do_test_sync
+
+. setup_hugepage_pingpong.sh
+
+TEST_TITLE='hugepage_pingpong_single'
+TEST_PREPARE=prepare_hugepage_pingpong
+TEST_CLEANUP=cleanup_hugepage_pingpong
+TEST_CONTROLLER=control_hugepage_pingpong
+TEST_CHECKER=check_hugepage_pingpong
+EXPECTED_RETURN_CODE="START EXIT"
+do_test_async
+
+TEST_TITLE='hugepage_pingpong_race'
+TEST_PREPARE=prepare_hugepage_pingpong
+TEST_CLEANUP=cleanup_hugepage_pingpong
+TEST_CONTROLLER=control_hugepage_pingpong_race
+TEST_CHECKER=check_hugepage_pingpong
+TEST_FLAGS=devel
+EXPECTED_RETURN_CODE="START EXIT"
+do_test_async
+
+TEST_TITLE='hugepage_pingpong_race_with_numa_maps'
+TEST_PREPARE=prepare_hugepage_pingpong
+TEST_CLEANUP=cleanup_hugepage_pingpong
+TEST_CONTROLLER=control_hugepage_pingpong_race_with_numa_maps
+TEST_CHECKER=check_hugepage_pingpong
+TEST_FLAGS=devel
+EXPECTED_RETURN_CODE="START EXIT"
+do_test_async
