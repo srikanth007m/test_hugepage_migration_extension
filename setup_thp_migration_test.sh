@@ -1,59 +1,16 @@
 #!/bin/bash
 
-. test_core/lib/setup_thp_base.sh
-
 # requires numactl package
 
 NUMNODE=$(numactl -H | grep available | cut -f2 -d' ')
 [ "$NUMNODE" -eq 1 ] && echo "no numa node" >&2 && exit 1
 
-TESTALLOCTHP="`dirname $BASH_SOURCE`/test_alloc_thp"
-[ ! -x "$TESTALLOC" ] && echo "test_alloc_thp not found." >&2 && exit 1
+check_and_define_tp test_alloc_thp
+check_and_define_tp test_mlock_on_shared_thp
+check_and_define_tp test_mprotect_on_shared_thp
+check_and_define_tp numa_maps
 
-TESTMLOCKONSHAREDTHP="`dirname $BASH_SOURCE`/test_mlock_on_shared_thp"
-[ ! -x "$TESTMLOCKONSHAREDTHP" ] && echo "test_mlock_on_shared_thp not found." >&2 && exit 1
-
-TESTMPROTECTONSHAREDTHP="`dirname $BASH_SOURCE`/test_mprotect_on_shared_thp"
-[ ! -x "$TESTMPROTECTONSHAREDTHP" ] && echo "test_mprotect_on_shared_thp not found." >&2 && exit 1
-
-NUMA_MAPS_RB="`dirname $BASH_SOURCE`/numa_maps.rb"
-[ ! -x "$NUMA_MAPS_RB" ] && echo "numa_maps.rb not found." >&2 && exit 1
-
-PAGETYPES=${KERNEL_SRC}/tools/vm/page-types
-if [ ! -x "$PAGETYPES" ] ; then
-    make -C ${KERNEL_SRC}/tools vm
-    if [ $? -ne 0 ] ; then
-        echo "page-types not found." >&2
-        exit 1
-    fi
-fi
-
-get_pagetypes() { ${PAGETYPES} $@; }
 get_numa_maps() { cat /proc/$1/numa_maps; }
-do_migratepages() {
-    if [ $# -ne 3 ] ; then
-        migratepages $1 0 1;
-    else
-        migratepages "$1" "$2" "$3";
-    fi
-}
-do_memory_hotremove() { bash memory_hotremove.sh ${PAGETYPES} $1; }
-show_offline_memblocks() {
-    local block=""
-    local memblocks="$(find /sys/devices/system/memory/ -type d -maxdepth 1 | grep "memory/memory" | sed 's/.*memory//')"
-    for mb in $memblocks ; do
-        if [ "$(cat /sys/devices/system/memory/memory${mb}/state)" == "offline" ] ; then
-            block="$block $mb"
-        fi
-    done
-    echo "offlined memory blocks: $block"
-    if [ "$1" == "online" ] ; then
-        for mb in $block ; do
-            echo "Re-online memory block $mb"
-            echo online > /sys/devices/system/memory/memory${mb}/state
-        done
-    fi
-}
 
 kill_test_programs() {
     pkill -9 -f $TESTALLOCTHP
@@ -81,24 +38,24 @@ control_thp_migration_auto_numa() {
             for node in $(seq $NUMNODE) ; do
                 do_migratepages $pid $[node-1] 1
             done
-            $NUMA_MAPS_RB $pid
+            $numa_maps $pid
             kill -SIGUSR1 $pid
             ;;
         "entering busy loop")
             # most of the memory mapped on the process (except thps) is
             # on node 1, which should trigger numa balancin migration.
-            $NUMA_MAPS_RB $pid
+            $numa_maps $pid
             get_numa_maps ${pid}   > ${TMPF}.numa_maps1
             # get_numa_maps ${pid}
-            get_pagetypes -p $pid -Nl -a 0x700000000+$[NR_THPS * 512]
+            $PAGETYPES -p $pid -Nl -a 0x700000000+$[NR_THPS * 512]
             # expecting numa balancing migration
             sleep 1
-            $NUMA_MAPS_RB $pid
-            get_pagetypes -p $pid -Nl -a 0x700000000+$[NR_THPS * 512]
+            $numa_maps $pid
+            $PAGETYPES -p $pid -Nl -a 0x700000000+$[NR_THPS * 512]
             kill -SIGUSR1 $pid
             ;;
         "set mempolicy to default")
-            $NUMA_MAPS_RB $pid
+            $numa_maps $pid
             kill -SIGUSR1 $pid
             ;;
         "exited busy loop")
@@ -162,14 +119,14 @@ control_mlock_on_shared_thp() {
     case "$line" in
         "before fork")
             echo "pid: $pid" | tee -a ${OFILE}
-            get_pagetypes -p $pid -Nl -a 0x700000000+$[NR_THPS * 512] \
+            $PAGETYPES -p $pid -Nl -a 0x700000000+$[NR_THPS * 512] \
                 | sed 's/^/  /' | tee -a ${OFILE}
             kill -SIGUSR1 $pid
             ;;
         "check shared thp")
             for ppid in $(pgrep -f $TESTMLOCKONSHAREDTHP) ; do
                 echo "pid: $ppid ---" | tee -a ${OFILE}
-                get_pagetypes -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                $PAGETYPES -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
                     | sed 's/^/  /' | tee -a ${OFILE}
             done
             for ppid in $(pgrep -f $TESTMLOCKONSHAREDTHP) ; do
@@ -179,7 +136,7 @@ control_mlock_on_shared_thp() {
         "exited busy loop")
             for ppid in $(pgrep -f $TESTMLOCKONSHAREDTHP) ; do
                 echo "pid: $ppid ---" | tee -a ${OFILE}
-                get_pagetypes -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                $PAGETYPES -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
                     | sed 's/^/  /' | tee -a ${OFILE}
             done
             for ppid in $(pgrep -f $TESTMLOCKONSHAREDTHP) ; do
@@ -223,7 +180,7 @@ control_mprotect_on_shared_thp() {
     case "$line" in
         "before fork")
             echo "pid: $pid" | tee -a ${OFILE}
-            get_pagetypes -p $pid -Nl -a 0x700000000+$[NR_THPS * 512] \
+            $PAGETYPES -p $pid -Nl -a 0x700000000+$[NR_THPS * 512] \
                 | sed 's/^/  /' | tee -a ${OFILE}
             get_vma_protection $pid
             kill -SIGUSR1 $pid
@@ -234,7 +191,7 @@ control_mprotect_on_shared_thp() {
                 CHECKED=true
                 for ppid in $(pgrep -f $TESTMPROTECTONSHAREDTHP) ; do
                     echo "pid: $ppid ---" | tee -a ${OFILE}
-                    get_pagetypes -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                    $PAGETYPES -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
                         | sed 's/^/  /' | tee -a ${OFILE}
                     get_vma_protection $ppid
                 done
@@ -245,7 +202,7 @@ control_mprotect_on_shared_thp() {
             sleep 0.1
             for ppid in $(pgrep -f $TESTMPROTECTONSHAREDTHP) ; do
                 echo "pid: $ppid ---" | tee -a ${OFILE}
-                get_pagetypes -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
+                $PAGETYPES -p $ppid -Nl -a 0x700000000+$[NR_THPS * 512] \
                     | sed 's/^/  /' | tee -a ${OFILE}
                 get_vma_protection $ppid
             done

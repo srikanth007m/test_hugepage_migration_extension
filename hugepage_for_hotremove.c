@@ -89,10 +89,8 @@ int main(int argc, char *argv[]) {
 
 	/* unmap all hugepages except ones in preferred_memblk */
 	for (i = 0; i < nr_hp; i++)
-		if (pfns[i] >> MEMBLK_ORDER != preferred_memblk) {
+		if (pfns[i] >> MEMBLK_ORDER != preferred_memblk)
 			checked_munmap(&p[i * HPS], HPS);
-			printf("munmap %d %lx\n", i, (unsigned long)&p[i*HPS]);
-		}
 
 	pprintf("before memory_hotremove: %d\n", preferred_memblk);
 	pause();

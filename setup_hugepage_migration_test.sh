@@ -18,46 +18,30 @@ if [ "${HPSIZE}" -ne 1048576 -a "${HPSIZE}" -ne 2048 ] ; then
     exit 1
 fi
 
-MEMTOTAL=$(grep MemTotal: /proc/meminfo | awk '{print $2}')
-HPNUM=$[MEMTOTAL/HPSIZE/2]
-
-TESTALLOC="`dirname $BASH_SOURCE`/test_alloc"
-[ ! -x "$TESTALLOC" ] && echo "test_alloc not found." >&2 && exit 1
-TESTMBIND="`dirname $BASH_SOURCE`/test_mbind"
-[ ! -x "$TESTMBIND" ] && echo "test_mbind not found." >&2 && exit 1
-TESTMOVEPAGES="`dirname $BASH_SOURCE`/test_move_pages"
-[ ! -x "$TESTMOVEPAGES" ] && echo "test_move_pages not found." >&2 && exit 1
-TESTHOTREMOVE="`dirname $BASH_SOURCE`/hugepage_for_hotremove"
-[ ! -x "$TESTHOTREMOVE" ] && echo "hugepage_for_hotremove not found." >&2 && exit 1
-HOGHUGEPAGES="`dirname $BASH_SOURCE`/hog_hugepages"
-[ ! -x "$HOGHUGEPAGES" ] && echo "hoge_hugepages not found." >&2 && exit 1
-MADVISE_ALL="`dirname $BASH_SOURCE`/madvise_all_hugepages"
-[ ! -x "$MADVISE_ALL" ] && echo "madvise_all_hugepages not found." >&2 && exit 1
-
-sysctl vm.nr_hugepages=$HPNUM
-NRHUGEPAGE=`cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages`
-if [ "${NRHUGEPAGE}" -ne $HPNUM ] ; then
-    echo "Set vm.nr_hugepages=100, but current size is $NRHUGEPAGE," >&2
-    echo "it could make later tests fail." >&2
-fi
+check_and_define_tp test_alloc
+check_and_define_tp test_mbind
+check_and_define_tp test_move_pages
+check_and_define_tp hugepage_for_hotremove
+check_and_define_tp hog_hugepages
+check_and_define_tp madvise_hwpoison_hugepages
+check_and_define_tp iterate_hugepage_mmap_fault_munmap
+check_and_define_tp iterate_numa_move_pages
 
 # reserve (total - 2) hugepages
 reserve_most_hugepages() {
-    local hp_total=$(cat /sys/kernel/mm/hugepages/hugepages-${HPSIZE}kB/nr_hugepages)
-    eval ${HOGHUGEPAGES} -r -m private -n $[hp_total-2] &
+    eval $hog_hugepages -r -m private -n $[HPNUM-2] &
 }
 
 allocate_most_hugepages() {
-    local hp_total=$(cat /sys/kernel/mm/hugepages/hugepages-${HPSIZE}kB/nr_hugepages)
-    eval ${HOGHUGEPAGES} -m private -n $[hp_total-2] &
+    eval $hog_hugepages -m private -n $[HPNUM-2] &
 }
 
 stop_hog_hugepages() {
-    pkill -SIGUSR1 -f hog_hugepages
+    pkill -SIGUSR1 -f $hog_hugepages
 }
 
-get_pagetypes() { ${PAGETYPES} $@; }
 get_numa_maps() { cat /proc/$1/numa_maps; }
+
 do_migratepages() {
     if [ $# -ne 3 ] ; then
         migratepages $1 0 1;
@@ -65,8 +49,10 @@ do_migratepages() {
         migratepages "$1" "$2" "$3";
     fi
 }
+
 do_memory_hotremove() { bash memory_hotremove.sh ${PAGETYPES} $1; }
-show_offline_memblocks() {
+
+reonline_memblocks() {
     local block=""
     local memblocks="$(find /sys/devices/system/memory/ -type d -maxdepth 1 | grep "memory/memory" | sed 's/.*memory//')"
     for mb in $memblocks ; do
@@ -75,30 +61,36 @@ show_offline_memblocks() {
         fi
     done
     echo "offlined memory blocks: $block"
-    if [ "$1" == "online" ] ; then
-        for mb in $block ; do
-            echo "Re-online memory block $mb"
-            echo online > /sys/devices/system/memory/memory${mb}/state
-        done
-    fi
+    for mb in $block ; do
+        echo "Re-online memory block $mb"
+        echo online > /sys/devices/system/memory/memory${mb}/state
+    done
 }
 
 kill_test_programs() {
-    pkill -9 -f $TESTALLOC
-    pkill -9 -f $TESTMBIND
-    pkill -9 -f $TESTMOVEPAGES
-    pkill -9 -f $TESTHOTREMOVE
+    pkill -9 -f $test_alloc
+    pkill -9 -f $test_mbind
+    pkill -9 -f $test_move_pages
+    pkill -9 -f $hugepage_for_hotremove
+    pkill -9 -f $hog_hugepages
+    pkill -9 -f $madvise_all_hugepages
+    pkill -9 -f $iterate_hugepage_mmap_fault_munmap
+    pkill -9 -f $iterate_numa_move_pages
 }
 
 prepare_test() {
     kill_test_programs
+    hugetlb_empty_check
     get_kernel_message_before
+    sysctl vm.nr_hugepages=$HPNUM
 }
 
 cleanup_test() {
     get_kernel_message_after
     get_kernel_message_diff | tee -a ${OFILE}
     kill_test_programs
+    sysctl vm.nr_hugepages=0
+    hugetlb_empty_check
 }
 
 control_migratepages() {
@@ -136,14 +128,14 @@ control_mbind_migration() {
     echo "$line" | tee -a ${OFILE}
     case "$line" in
         "before mbind")
-            get_numa_maps ${pid}   > ${TMPF}.numa_maps1
+            get_numa_maps ${pid} > ${TMPF}.numa_maps1
             kill -SIGUSR1 $pid
             ;;
         "entering busy loop")
             kill -SIGUSR1 $pid
             ;;
         "exited busy loop")
-            get_numa_maps ${pid}   > ${TMPF}.numa_maps2
+            get_numa_maps ${pid} > ${TMPF}.numa_maps2
             kill -SIGUSR1 $pid
             set_return_code EXIT
             return 0
@@ -161,14 +153,14 @@ control_move_pages() {
     echo "$line" | tee -a ${OFILE}
     case "$line" in
         "before move_pages")
-            get_numa_maps ${pid}   > ${TMPF}.numa_maps1
+            get_numa_maps ${pid} > ${TMPF}.numa_maps1
             kill -SIGUSR1 $pid
             ;;
         "entering busy loop")
             kill -SIGUSR1 $pid
             ;;
         "exited busy loop")
-            get_numa_maps ${pid}   > ${TMPF}.numa_maps2
+            get_numa_maps ${pid} > ${TMPF}.numa_maps2
             kill -SIGUSR1 $pid
             set_return_code EXIT
             return 0
@@ -183,33 +175,28 @@ control_memory_hotremove_migration() {
     local pid="$1"
     local line="$2"
 
-    echo "$line" | tee -a ${OFILE}
+    echo_log "$line"
     case "$line" in
         "before memory_hotremove"* )
             echo $line | sed "s/before memory_hotremove: *//" > ${TMPF}.preferred_memblk
-            echo "preferred memory block: $targetmemblk" | tee -a ${OFILE}
-            get_pagetypes -p ${pid}
-            get_pagetypes -rNl -p ${pid} -b huge,compound_head=huge,compound_head > ${TMPF}.pagetypes1
-            get_numa_maps ${pid} > ${TMPF}.numa_maps1
+            echo_log "preferred memory block: $targetmemblk"
+            $PAGETYPES -rNl -p ${pid} -b huge,compound_head=huge,compound_head > ${TMPF}.pagetypes1
+            get_numa_maps ${pid} | tee -a $OFILE > ${TMPF}.numa_maps1
             kill -SIGUSR1 $pid
             ;;
         "entering busy loop")
-            echo "do memory hotplug ($(cat ${TMPF}.preferred_memblk))"
-            # do_memory_hotremove ${pid} > ${TMPF}.hotremove
-            grep HugeP /proc/meminfo
-            cat /sys/devices/system/node/node*/hugepages/hugepages-2048kB/free_hugepages
-            echo "echo offline > /sys/devices/system/memory/memory$(cat ${TMPF}.preferred_memblk)/state"
+            echo_log "do memory hotplug ($(cat ${TMPF}.preferred_memblk))"
+            echo_log "echo offline > /sys/devices/system/memory/memory$(cat ${TMPF}.preferred_memblk)/state"
             echo offline > /sys/devices/system/memory/memory$(cat ${TMPF}.preferred_memblk)/state
             if [ $? -ne 0 ] ; then
                 set_return_code MEMHOTREMOVE_FAILED
-                echo "do_memory_hotremove failed."
+                echo_log "do_memory_hotremove failed."
             fi
             kill -SIGUSR1 $pid
             ;;
         "exited busy loop")
-            get_pagetypes -p ${pid}
-            get_pagetypes -rNl -p ${pid} -b huge,compound_head=huge,compound_head > ${TMPF}.pagetypes2
-            get_numa_maps ${pid} > ${TMPF}.numa_maps2
+            $PAGETYPES -rNl -p ${pid} -b huge,compound_head=huge,compound_head > ${TMPF}.pagetypes2
+            get_numa_maps ${pid} | tee -a $OFILE  > ${TMPF}.numa_maps2
             kill -SIGUSR1 $pid
             set_return_code EXIT
             return 0
@@ -261,35 +248,33 @@ check_pagetypes() {
 
 prepare_memory_hotremove_migration() {
     prepare_test
-    sysctl vm.nr_hugepages=0
-    sysctl vm.nr_hugepages=$HPNUM
 }
 
 cleanup_memory_hotremove_migration() {
-    show_offline_memblocks online
+    reonline_memblocks
     cleanup_test
 }
 
 prepare_test_reserve_hugepages() {
-    reserve_most_hugepages
     prepare_test
+    reserve_most_hugepages
 }
 
 prepare_test_allocate_hugepages() {
-    allocate_most_hugepages
     prepare_test
+    allocate_most_hugepages
 }
 
 cleanup_test_hog_hugepages() {
-    cleanup_test
     stop_hog_hugepages
+    cleanup_test
 }
 
 control_race_move_pages_and_map_fault_unmap() {
     for i in $(seq 5) ; do
-        ./hugepage 10 &
+        $iterate_hugepage_mmap_fault_munmap 10 &
         local pidhuge=$!
-        ./movepages 10 $pidhuge &
+        $iterate_numa_move_pages 10 $pidhuge &
         local pidmove=$!
         sleep 7
         kill -SIGUSR1 $pidhuge $pidmove 2> /dev/null
@@ -302,8 +287,6 @@ prepare_race_move_pages_and_map_fault_unmap() {
 }
 
 cleanup_race_move_pages_and_map_fault_unmap() {
-    pkill -9 hugepage
-    pkill -9 movepages
     cleanup_test
 }
 
@@ -314,7 +297,7 @@ check_race_move_pages_and_map_fault_unmap() {
 
 control_race_migratepages_and_map_fault_unmap() {
     for i in $(seq 5) ; do
-        ./hugepage 10 &
+        $iterate_hugepage_mmap_fault_munmap 10 &
         local pid=$!
         for j in $(seq 100) ; do
             do_migratepages ${pid} 0 1
@@ -331,21 +314,21 @@ check_race_migratepages_and_map_fault_unmap() {
 }
 
 prepare_test_reserve_hugepages_overcommit() {
+    prepare_test
     sysctl -q vm.nr_overcommit_hugepages=$[HPNUM + 10]
     reserve_most_hugepages
-    prepare_test
 }
 
 prepare_test_allocate_hugepages_overcommit() {
+    prepare_test
     sysctl -q vm.nr_overcommit_hugepages=$[HPNUM + 10]
     allocate_most_hugepages
-    prepare_test
 }
 
 cleanup_test_hog_hugepages_overcommit() {
-    cleanup_test
     stop_hog_hugepages
     sysctl -q vm.nr_overcommit_hugepages=0
+    cleanup_test
 }
 
 BG_MIGRATION_PID=
@@ -353,7 +336,7 @@ control_race_gup_and_migration() {
     local pid="$1"
     local line="$2"
 
-    echo "$line" | tee -a ${OFILE}
+    echo_log "$line"
     case "$line" in
         "need unpoison")
             $PAGETYPES -b hwpoison,huge,compound_head=hwpoison,huge,compound_head -x -N
@@ -387,8 +370,6 @@ run_background_migration() {
 }
 
 prepare_race_gup_and_migration() {
-    sysctl vm.nr_hugepages=0
-    sysctl vm.nr_hugepages=$HPNUM
     prepare_test
 }
 

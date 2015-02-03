@@ -1,4 +1,4 @@
-src=test_alloc.c test_mbind.c test_move_pages.c test_memory_hotremove.c hog_hugepages.c movepages.c hugepage.c hugepage_for_hotremove.c test_alloc_thp.c test_mlock_on_shared_thp.c test_mprotect_on_shared_thp.c madvise_all_hugepages.c hugepage_pingpong.c
+src=test_alloc.c test_mbind.c test_move_pages.c test_memory_hotremove.c hog_hugepages.c iterate_numa_move_pages.c iterate_hugepage_mmap_fault_munmap.c hugepage_for_hotremove.c test_alloc_thp.c test_mlock_on_shared_thp.c test_mprotect_on_shared_thp.c madvise_hwpoison_hugepages.c hugepage_pingpong.c
 exe=$(src:.c=)
 srcdir=.
 dstdir=/usr/local/bin
@@ -28,11 +28,10 @@ install: $(exe)
 	done
 
 clean:
-	for file in $(exe) ; do \
+	@for file in $(exe) ; do \
 	  rm $(dstdir)/$$file 2> /dev/null ; \
 	  rm $(srcdir)/$$file 2> /dev/null ; \
 	done
-	@make clean -C lib
 
 cleanup: clean
 	@rm -rf work/*
