@@ -17,6 +17,7 @@ DEFAULT_TEST_CHECKER=check_hugepage_migration
 TEST_TITLE="migratepages_shared"
 EXPECTED_RETURN_CODE="START EXIT"
 TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
+TEST_PREPARE=prepare_migratepages
 TEST_CONTROLLER=control_migratepages
 do_test_sync
 

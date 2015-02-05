@@ -3,7 +3,6 @@
 # requires numactl package
 
 NUMNODE=$(numactl -H | grep available | cut -f2 -d' ')
-[ "$NUMNODE" -eq 1 ] && echo "no numa node" >&2 && exit 1
 
 HUGETLBDIR=`grep hugetlbfs /proc/mounts | head -n1 | cut -f2 -d' '`
 if [ ! -d "${HUGETLBDIR}" ] ; then
@@ -91,6 +90,11 @@ cleanup_test() {
     kill_test_programs
     sysctl vm.nr_hugepages=0
     hugetlb_empty_check
+}
+
+prepare_migratepages() {
+    [ "$NUMNODE" -eq 1 ] && echo "no numa node" >&2 && return 1
+    prepare_test
 }
 
 control_migratepages() {
