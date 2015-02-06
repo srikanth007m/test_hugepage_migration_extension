@@ -1,0 +1,9 @@
+TEST_PREPARE=prepare_hugepage_pingpong
+TEST_CLEANUP=cleanup_hugepage_pingpong
+TEST_CONTROLLER=control_hugepage_pingpong_race_with_numa_maps
+PINGPONG_NR_PROC=2
+PINGPONG_NR_HPS=1
+PINGPONG_ALLOC_TYPES=0xff
+TEST_CHECKER=check_hugepage_pingpong
+TEST_FLAGS=devel
+EXPECTED_RETURN_CODE="START EXIT"

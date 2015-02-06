@@ -1,0 +1,3 @@
+TEST_PROGRAM="$test_move_pages -m private -h $HPSIZE"
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_CONTROLLER=control_move_pages

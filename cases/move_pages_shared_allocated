@@ -1,0 +1,5 @@
+TEST_PROGRAM="$test_move_pages -m shared -h $HPSIZE"
+EXPECTED_RETURN_CODE="START KILLED"
+TEST_PREPARE=prepare_test_allocate_hugepages
+TEST_CLEANUP=cleanup_test_hog_hugepages
+TEST_CONTROLLER=control_move_pages

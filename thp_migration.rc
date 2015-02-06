@@ -1,0 +1,59 @@
+KERNEL_SRC=/src/linux-dev
+. test_core/lib/common.sh
+. test_core/lib/setup_mce_tools.sh
+. test_core/lib/setup_hugetlb_base.sh
+. test_core/lib/setup_thp_base.sh
+
+HPSIZE=2048
+HPNUM=$[MEMTOTAL/HPSIZE/2]
+
+DEFAULT_TEST_PREPARE=prepare_test
+DEFAULT_TEST_CLEANUP=cleanup_test
+DEFAULT_TEST_CONTROLLER=control_hugepage_migration
+DEFAULT_TEST_CHECKER=check_hugepage_migration
+
+. setup_thp_migration_test.sh
+
+TEST_TITLE="thp_migration_auto_numa"
+EXPECTED_RETURN_CODE="START EXIT"
+NR_THPS=1
+TEST_PROGRAM="${TESTALLOCTHP} -n $NR_THPS"
+TEST_CONTROLLER=control_thp_migration_auto_numa
+TEST_CHECKER=check_thp_migration_auto_numa
+TEST_PREPARE=prepare_thp_migration_auto_numa
+TEST_CLEANUP=cleanup_thp_migration_auto_numa
+TEST_FLAGS=devel
+do_test_sync
+
+TEST_TITLE="mlock_on_shared_thp"
+EXPECTED_RETURN_CODE="START EXIT"
+NR_THPS=2
+TEST_PROGRAM="${TESTMLOCKONSHAREDTHP} -n $NR_THPS"
+TEST_CONTROLLER=control_$TEST_TITLE
+TEST_CHECKER=check_$TEST_TITLE
+TEST_PREPARE=prepare_$TEST_TITLE
+TEST_CLEANUP=cleanup_$TEST_TITLE
+TEST_FLAGS=devel
+do_test_sync
+
+TEST_TITLE="mprotect_on_shared_thp"
+EXPECTED_RETURN_CODE="START EXIT"
+NR_THPS=2
+TEST_PROGRAM="${TESTMPROTECTONSHAREDTHP} -n $NR_THPS"
+TEST_CONTROLLER=control_mprotect_on_shared_thp
+TEST_CHECKER=check_mprotect_on_shared_thp
+TEST_PREPARE=prepare_mprotect_on_shared_thp
+TEST_CLEANUP=cleanup_mprotect_on_shared_thp
+TEST_FLAGS=devel
+do_test_sync
+
+TEST_TITLE="mprotect_on_shared_thp_unaligned"
+EXPECTED_RETURN_CODE="START EXIT"
+NR_THPS=2
+TEST_PROGRAM="${TESTMPROTECTONSHAREDTHP} -u -n $NR_THPS"
+TEST_CONTROLLER=control_mprotect_on_shared_thp
+TEST_CHECKER=check_mprotect_on_shared_thp
+TEST_PREPARE=prepare_mprotect_on_shared_thp
+TEST_CLEANUP=cleanup_mprotect_on_shared_thp
+TEST_FLAGS=devel
+do_test_sync

@@ -75,16 +75,53 @@ kill_test_programs() {
     pkill -9 -f $madvise_all_hugepages
     pkill -9 -f $iterate_hugepage_mmap_fault_munmap
     pkill -9 -f $iterate_numa_move_pages
+    pkill -9 -f "run_background_migration"
 }
 
-prepare_test() {
+prepare_HM_base() {
+    if ! [ "$NUMNODE" -gt 1 ] ; then
+        count_skipped "No NUMA system"
+        return 1
+    fi
     kill_test_programs
     hugetlb_empty_check
     get_kernel_message_before
     sysctl vm.nr_hugepages=$HPNUM
 }
 
-cleanup_test() {
+prepare_HM_reserve() {
+    prepare_HM_base || return 1
+    reserve_most_hugepages
+}
+
+prepare_HM_allocate() {
+    prepare_HM_base || return 1
+    allocate_most_hugepages
+}
+
+prepare_HM_reserve_overcommit() {
+    prepare_HM_base || return 1
+    sysctl -q vm.nr_overcommit_hugepages=$[HPNUM + 10]
+    reserve_most_hugepages
+}
+
+prepare_HM_allocate_overcommit() {
+    prepare_HM_base || return 1
+    sysctl -q vm.nr_overcommit_hugepages=$[HPNUM + 10]
+    allocate_most_hugepages
+}
+
+# memory hotremove could happen even on non numa system, so let's test it.
+prepare_memory_hotremove() {
+    PIPETIMEOUT=30
+    kill_test_programs
+    hugetlb_empty_check
+    get_kernel_message_before
+    set_and_check_hugetlb_pool $HPNUM_FOR_HOTREMOVE
+    grep Huge /proc/meminfo
+}
+
+cleanup_HM_base() {
     get_kernel_message_after
     get_kernel_message_diff | tee -a ${OFILE}
     kill_test_programs
@@ -92,9 +129,26 @@ cleanup_test() {
     hugetlb_empty_check
 }
 
-prepare_migratepages() {
-    [ "$NUMNODE" -eq 1 ] && echo "no numa node" >&2 && return 1
-    prepare_test
+cleanup_HM_hog_hugepages() {
+    stop_hog_hugepages
+    cleanup_HM_base
+}
+
+cleanup_HM_hog_hugepages_overcommit() {
+    stop_hog_hugepages
+    sysctl -q vm.nr_overcommit_hugepages=0
+    cleanup_HM_base
+}
+
+cleanup_memory_hotremove() {
+    reonline_memblocks
+    cleanup_HM_base
+    PIPETIMEOUT=5
+}
+
+cleanup_race_gup_and_migration() {
+    all_unpoison
+    cleanup_HM_base
 }
 
 control_migratepages() {
@@ -175,7 +229,7 @@ control_move_pages() {
     return 1
 }
 
-control_memory_hotremove_migration() {
+control_memory_hotremove() {
     local pid="$1"
     local line="$2"
 
@@ -250,30 +304,6 @@ check_pagetypes() {
     fi
 }
 
-prepare_memory_hotremove_migration() {
-    prepare_test
-}
-
-cleanup_memory_hotremove_migration() {
-    reonline_memblocks
-    cleanup_test
-}
-
-prepare_test_reserve_hugepages() {
-    prepare_test
-    reserve_most_hugepages
-}
-
-prepare_test_allocate_hugepages() {
-    prepare_test
-    allocate_most_hugepages
-}
-
-cleanup_test_hog_hugepages() {
-    stop_hog_hugepages
-    cleanup_test
-}
-
 control_race_move_pages_and_map_fault_unmap() {
     for i in $(seq 5) ; do
         $iterate_hugepage_mmap_fault_munmap 10 &
@@ -284,14 +314,6 @@ control_race_move_pages_and_map_fault_unmap() {
         kill -SIGUSR1 $pidhuge $pidmove 2> /dev/null
     done
     set_return_code EXIT
-}
-
-prepare_race_move_pages_and_map_fault_unmap() {
-    prepare_test
-}
-
-cleanup_race_move_pages_and_map_fault_unmap() {
-    cleanup_test
 }
 
 check_race_move_pages_and_map_fault_unmap() {
@@ -315,24 +337,6 @@ control_race_migratepages_and_map_fault_unmap() {
 check_race_migratepages_and_map_fault_unmap() {
     check_kernel_message_nobug
     check_return_code "${EXPECTED_RETURN_CODE}"
-}
-
-prepare_test_reserve_hugepages_overcommit() {
-    prepare_test
-    sysctl -q vm.nr_overcommit_hugepages=$[HPNUM + 10]
-    reserve_most_hugepages
-}
-
-prepare_test_allocate_hugepages_overcommit() {
-    prepare_test
-    sysctl -q vm.nr_overcommit_hugepages=$[HPNUM + 10]
-    allocate_most_hugepages
-}
-
-cleanup_test_hog_hugepages_overcommit() {
-    stop_hog_hugepages
-    sysctl -q vm.nr_overcommit_hugepages=0
-    cleanup_test
 }
 
 BG_MIGRATION_PID=
@@ -371,16 +375,6 @@ run_background_migration() {
         migratepages $tp_pid 1 0 2> /dev/null
         get_numa_maps $tp_pid    2> /dev/null | grep " huge "
     done
-}
-
-prepare_race_gup_and_migration() {
-    prepare_test
-}
-
-cleanup_race_gup_and_migration() {
-    $PAGETYPES -b hwpoison,huge,compound_head=hwpoison,huge,compound_head -x -N
-    kill -9 $BG_MIGRATION_PID
-    cleanup_test
 }
 
 check_race_gup_and_migration() {

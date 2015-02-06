@@ -1,0 +1,4 @@
+EXPECTED_RETURN_CODE="START EXIT"
+TEST_CONTROLLER=control_race_migratepages_and_map_fault_unmap
+TEST_CHECKER=check_race_migratepages_and_map_fault_unmap
+TEST_FLAGS=devel

@@ -1,10 +1,5 @@
 #!/bin/bash
 
-if [[ "$0" =~ "$BASH_SOURCE" ]] ; then
-    echo "$BASH_SOURCE should be included from another script, not directly called."
-    exit 1
-fi
-
 check_and_define_tp hugepage_pingpong
 TESTFILE=${WDIR}/testfile
 
@@ -12,26 +7,34 @@ kill_test_programs() {
     pkill -9 -f $hugepage_pingpong
 }
 
-prepare_test() {
+prepare_hugepage_pingpong() {
+    if ! [ "$NUMNODE" -gt 1 ] ; then
+        count_skipped "No NUMA system"
+        return 1
+    fi
     kill_test_programs
+    ipcrm --all > /dev/null 2>&1
+    rm -rf ${WDIR}/mount/* 2> /dev/null
+    umount -f ${WDIR}/mount 2> /dev/null
     hugetlb_empty_check
     get_kernel_message_before
-    sysctl vm.nr_hugepages=$HPNUM
+    sysctl vm.nr_hugepages=10 # $HPNUM
+    mkdir -p ${WDIR}/mount
+    mount -t hugetlbfs none ${WDIR}/mount
 }
 
-cleanup_test() {
+cleanup_hugepage_pingpong() {
+    kill_test_programs
+    ipcrm --all > /dev/null 2>&1
+    echo "remove hugetlbfs files" | tee -a ${OFILE}
+    rm -rf ${WDIR}/mount/*
+    echo "umount hugetlbfs" | tee -a ${OFILE}
+    umount -f ${WDIR}/mount
+    sysctl vm.nr_hugepages=0
+    sleep 1
+    hugetlb_empty_check
     get_kernel_message_after
     get_kernel_message_diff | tee -a ${OFILE}
-    kill_test_programs
-    ipcs -s -t | cut -f1 -d' ' | egrep '[0-9]' | xargs ipcrm sem > /dev/null 2>&1
-    sysctl vm.nr_hugepages=0
-    hugetlb_empty_check
-}
-
-check_test() {
-    check_kernel_message -v "failed"
-    check_kernel_message_nobug
-    check_return_code "${EXPECTED_RETURN_CODE}"
 }
 
 control_hugepage_pingpong() {
@@ -91,35 +94,11 @@ control_hugepage_pingpong_race_with_numa_maps() {
     set_return_code EXIT
 }
 
-prepare_hugepage_pingpong() {
-    kill_test_programs
-    ipcrm --all > /dev/null 2>&1
-    rm -rf ${WDIR}/mount/* 2> /dev/null
-    umount -f ${WDIR}/mount 2> /dev/null
-    hugetlb_empty_check
-    get_kernel_message_before
-    sysctl vm.nr_hugepages=10 # $HPNUM
-    mkdir -p ${WDIR}/mount
-    mount -t hugetlbfs none ${WDIR}/mount
-}
-
-cleanup_hugepage_pingpong() {
-    kill_test_programs
-    ipcrm --all > /dev/null 2>&1
-    echo "remove hugetlbfs files" | tee -a ${OFILE}
-    rm -rf ${WDIR}/mount/*
-    echo "umount hugetlbfs" | tee -a ${OFILE}
-    umount -f ${WDIR}/mount
-    sysctl vm.nr_hugepages=0
-    sleep 1
-    hugetlb_empty_check
-    get_kernel_message_after
-    get_kernel_message_diff | tee -a ${OFILE}
-}
-
 # inside cheker you must tee output in you own.
 check_hugepage_pingpong() {
-    check_test
+    check_kernel_message -v "failed"
+    check_kernel_message_nobug
+    check_return_code "${EXPECTED_RETURN_CODE}"
     __check_hugepage_pingpong
 }
 

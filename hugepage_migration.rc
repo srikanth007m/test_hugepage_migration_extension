@@ -5,308 +5,43 @@ KERNEL_SRC=/src/linux-dev
 . test_core/lib/setup_thp_base.sh
 
 HPSIZE=2048
-HPNUM=$[MEMTOTAL/HPSIZE/2]
+HPNUM=100
+HPNUM_FOR_HOTREMOVE=$[MEMTOTAL/HPSIZE/2]
+NUMNODE=
 
 . setup_hugepage_migration_test.sh
 
-DEFAULT_TEST_PREPARE=prepare_test
-DEFAULT_TEST_CLEANUP=cleanup_test
-DEFAULT_TEST_CONTROLLER=control_hugepage_migration
-DEFAULT_TEST_CHECKER=check_hugepage_migration
-
-TEST_TITLE="migratepages_shared"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
-TEST_PREPARE=prepare_migratepages
-TEST_CONTROLLER=control_migratepages
-do_test_sync
-
-TEST_TITLE="migratepages_shared_reserved"
-EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
-TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_migratepages
-TEST_PREPARE=prepare_test_reserve_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-TEST_CHECKER=check_hugepage_migration_fail
-do_test_sync
-
-TEST_TITLE="migratepages_shared_allocated"
-EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
-TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_migratepages
-TEST_PREPARE=prepare_test_allocate_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-TEST_CHECKER=check_hugepage_migration_fail
-do_test_sync
-
-TEST_TITLE="migratepages_private"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_migratepages
-do_test_sync
-
-TEST_TITLE="migratepages_private_reserved"
-EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
-TEST_PROGRAM="$test_alloc -m private -h $HPSIZE"
-TEST_CONTROLLER=control_migratepages
-TEST_PREPARE=prepare_test_reserve_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-TEST_CHECKER=check_hugepage_migration_fail
-do_test_sync
-
-TEST_TITLE="migratepages_private_allocated"
-EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
-TEST_PROGRAM="$test_alloc -m private -h $HPSIZE"
-TEST_CONTROLLER=control_migratepages
-TEST_PREPARE=prepare_test_allocate_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-TEST_CHECKER=check_hugepage_migration_fail
-do_test_sync
-
-TEST_TITLE="migratepages_shared_reserved_overcommit"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_migratepages
-TEST_PREPARE=prepare_test_reserve_hugepages_overcommit
-TEST_CLEANUP=cleanup_test_hog_hugepages_overcommit
-do_test_sync
-
-TEST_TITLE="migratepages_shared_allocated_overcommit"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_migratepages
-TEST_PREPARE=prepare_test_allocate_hugepages_overcommit
-TEST_CLEANUP=cleanup_test_hog_hugepages_overcommit
-do_test_sync
-
-# mbind
-
-TEST_TITLE="mbind_migration_shared"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$test_mbind -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_mbind_migration
-do_test_sync
-
-TEST_TITLE="mbind_migration_shared_reserved"
-EXPECTED_RETURN_CODE="START KILLED"
-TEST_PROGRAM="$test_mbind -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_mbind_migration
-TEST_PREPARE=prepare_test_reserve_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-do_test_sync
-
-TEST_TITLE="mbind_migration_shared_allocated"
-EXPECTED_RETURN_CODE="START KILLED"
-TEST_PROGRAM="$test_mbind -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_mbind_migration
-TEST_PREPARE=prepare_test_allocate_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-do_test_sync
-
-TEST_TITLE="mbind_migration_private"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$test_mbind -m private -h $HPSIZE"
-TEST_CONTROLLER=control_mbind_migration
-do_test_sync
-
-TEST_TITLE="mbind_migration_private_reserved"
-EXPECTED_RETURN_CODE="START KILLED"
-TEST_PROGRAM="$test_mbind -m private -h $HPSIZE"
-TEST_CONTROLLER=control_mbind_migration
-TEST_PREPARE=prepare_test_reserve_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-do_test_sync
-
-TEST_TITLE="mbind_migration_private_allocated"
-EXPECTED_RETURN_CODE="START KILLED"
-TEST_PROGRAM="$test_mbind -m private -h $HPSIZE"
-TEST_CONTROLLER=control_mbind_migration
-TEST_PREPARE=prepare_test_allocate_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-do_test_sync
-
-# move_pages
-
-TEST_TITLE="move_pages_shared"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$test_move_pages -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_move_pages
-do_test_sync
-
-TEST_TITLE="move_pages_shared_reserved"
-EXPECTED_RETURN_CODE="START KILLED"
-TEST_PROGRAM="$test_move_pages -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_move_pages
-TEST_PREPARE=prepare_test_reserve_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-do_test_sync
-
-TEST_TITLE="move_pages_shared_allocated"
-EXPECTED_RETURN_CODE="START KILLED"
-TEST_PROGRAM="$test_move_pages -m shared -h $HPSIZE"
-TEST_CONTROLLER=control_move_pages
-TEST_PREPARE=prepare_test_allocate_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-do_test_sync
-
-TEST_TITLE="move_pages_private"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$test_move_pages -m private -h $HPSIZE"
-TEST_CONTROLLER=control_move_pages
-do_test_sync
-
-TEST_TITLE="move_pages_private_reserved"
-EXPECTED_RETURN_CODE="START KILLED"
-TEST_PROGRAM="$test_move_pages -m private -h $HPSIZE"
-TEST_CONTROLLER=control_move_pages
-TEST_PREPARE=prepare_test_reserve_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-do_test_sync
-
-TEST_TITLE="move_pages_private_allocated"
-EXPECTED_RETURN_CODE="START KILLED"
-TEST_PROGRAM="$test_move_pages -m private -h $HPSIZE"
-TEST_CONTROLLER=control_move_pages
-TEST_PREPARE=prepare_test_allocate_hugepages
-TEST_CLEANUP=cleanup_test_hog_hugepages
-do_test_sync
-
-# memory hotplug
-
-# These testcase takes longer if we have many hugeapges.
-PIPETIMEOUT=30
-
-TEST_TITLE="memory_hotremove_migration_shared"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$hugepage_for_hotremove -m shared -n $[HPNUM \*4/5]"
-TEST_CONTROLLER=control_memory_hotremove_migration
-TEST_CHECKER=check_memory_hotremove_migration
-TEST_PREPARE=prepare_memory_hotremove_migration
-TEST_CLEANUP=cleanup_memory_hotremove_migration
-TEST_RETRYABLE=5
-do_test_sync
-
-TEST_TITLE="memory_hotremove_migration_private"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PROGRAM="$hugepage_for_hotremove -m private -n $[HPNUM \*4/5]"
-TEST_CONTROLLER=control_memory_hotremove_migration
-TEST_CHECKER=check_memory_hotremove_migration
-TEST_PREPARE=prepare_memory_hotremove_migration
-TEST_CLEANUP=cleanup_memory_hotremove_migration
-TEST_RETRYABLE=5
-do_test_sync
-
-PIPETIMEOUT=5
-
-# race
-
-TEST_TITLE="race_migratepages_and_map_fault_unmap"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_CONTROLLER=control_race_migratepages_and_map_fault_unmap
-TEST_CHECKER=check_race_migratepages_and_map_fault_unmap
-TEST_FLAGS=devel
-do_test_async
-
-TEST_TITLE="race_move_pages_and_map_fault_unmap"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_CONTROLLER=control_race_move_pages_and_map_fault_unmap
-TEST_CHECKER=check_race_move_pages_and_map_fault_unmap
-TEST_PREPARE=prepare_race_move_pages_and_map_fault_unmap
-TEST_CLEANUP=cleanup_race_move_pages_and_map_fault_unmap
-TEST_FLAGS=devel
-do_test_async
-
-TEST_TITLE="race_gup_and_migration"
-TEST_PROGRAM="$madvise_hwpoison_hugepages -m private -u -n 100 -h 2048 -l 10"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_CONTROLLER=control_$TEST_TITLE
-TEST_CHECKER=check_$TEST_TITLE
-TEST_PREPARE=prepare_$TEST_TITLE
-TEST_CLEANUP=cleanup_$TEST_TITLE
-TEST_FLAGS=devel
-do_test_sync
-
-# thp migration
-
-. setup_thp_migration_test.sh
-
-TEST_TITLE="thp_migration_auto_numa"
-EXPECTED_RETURN_CODE="START EXIT"
-NR_THPS=1
-TEST_PROGRAM="${TESTALLOCTHP} -n $NR_THPS"
-TEST_CONTROLLER=control_thp_migration_auto_numa
-TEST_CHECKER=check_thp_migration_auto_numa
-TEST_PREPARE=prepare_thp_migration_auto_numa
-TEST_CLEANUP=cleanup_thp_migration_auto_numa
-TEST_FLAGS=devel
-do_test_sync
-
-TEST_TITLE="mlock_on_shared_thp"
-EXPECTED_RETURN_CODE="START EXIT"
-NR_THPS=2
-TEST_PROGRAM="${TESTMLOCKONSHAREDTHP} -n $NR_THPS"
-TEST_CONTROLLER=control_$TEST_TITLE
-TEST_CHECKER=check_$TEST_TITLE
-TEST_PREPARE=prepare_$TEST_TITLE
-TEST_CLEANUP=cleanup_$TEST_TITLE
-TEST_FLAGS=devel
-do_test_sync
-
-TEST_TITLE="mprotect_on_shared_thp"
-EXPECTED_RETURN_CODE="START EXIT"
-NR_THPS=2
-TEST_PROGRAM="${TESTMPROTECTONSHAREDTHP} -n $NR_THPS"
-TEST_CONTROLLER=control_mprotect_on_shared_thp
-TEST_CHECKER=check_mprotect_on_shared_thp
-TEST_PREPARE=prepare_mprotect_on_shared_thp
-TEST_CLEANUP=cleanup_mprotect_on_shared_thp
-TEST_FLAGS=devel
-do_test_sync
-
-TEST_TITLE="mprotect_on_shared_thp_unaligned"
-EXPECTED_RETURN_CODE="START EXIT"
-NR_THPS=2
-TEST_PROGRAM="${TESTMPROTECTONSHAREDTHP} -u -n $NR_THPS"
-TEST_CONTROLLER=control_mprotect_on_shared_thp
-TEST_CHECKER=check_mprotect_on_shared_thp
-TEST_PREPARE=prepare_mprotect_on_shared_thp
-TEST_CLEANUP=cleanup_mprotect_on_shared_thp
-TEST_FLAGS=devel
-do_test_sync
+#!TABLE: hugepage_migration.rc.table
 
 . setup_hugepage_pingpong.sh
 
-TEST_TITLE='hugepage_pingpong_single'
-TEST_PREPARE=prepare_hugepage_pingpong
-TEST_CLEANUP=cleanup_hugepage_pingpong
-TEST_CONTROLLER=control_hugepage_pingpong
-TEST_CHECKER=check_hugepage_pingpong
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_FLAGS=devel
-do_test_async
+#!TABLE: hugepage_pingpong.rc.table
 
-TEST_TITLE='hugepage_pingpong_race'
-TEST_PREPARE=prepare_hugepage_pingpong
-TEST_CLEANUP=cleanup_hugepage_pingpong
-TEST_CONTROLLER=control_hugepage_pingpong_race
-PINGPONG_NR_PROC=2
-PINGPONG_NR_HPS=1
-PINGPONG_ALLOC_TYPES=0xff
-PINGPONG_ALLOC_TYPES=0x2
-TEST_CHECKER=check_hugepage_pingpong
-TEST_FLAGS=devel
-EXPECTED_RETURN_CODE="START EXIT"
-do_test_async
-
-TEST_TITLE='hugepage_pingpong_race_with_numa_maps'
-TEST_PREPARE=prepare_hugepage_pingpong
-TEST_CLEANUP=cleanup_hugepage_pingpong
-TEST_CONTROLLER=control_hugepage_pingpong_race_with_numa_maps
-PINGPONG_NR_PROC=2
-PINGPONG_NR_HPS=1
-PINGPONG_ALLOC_TYPES=0xff
-PINGPONG_ALLOC_TYPES=0x2
-TEST_CHECKER=check_hugepage_pingpong
-TEST_FLAGS=devel
-EXPECTED_RETURN_CODE="START EXIT"
-do_test_async
+# #!EMBED: cases/migratepages_shared
+# #!EMBED: cases/migratepages_shared_reserved
+# #!EMBED: cases/migratepages_shared_allocated
+# #!EMBED: cases/migratepages_private
+# #!EMBED: cases/migratepages_private_reserved
+# #!EMBED: cases/migratepages_private_allocated
+# #!EMBED: cases/migratepages_shared_reserved_overcommit
+# #!EMBED: cases/migratepages_shared_allocated_overcommit
+# #!EMBED: cases/mbind_migration_shared
+# #!EMBED: cases/mbind_migration_shared_reserved
+# #!EMBED: cases/mbind_migration_shared_allocated
+# #!EMBED: cases/mbind_migration_private
+# #!EMBED: cases/mbind_migration_private_reserved
+# #!EMBED: cases/mbind_migration_private_allocated
+# #!EMBED: cases/move_pages_shared
+# #!EMBED: cases/move_pages_shared_reserved
+# #!EMBED: cases/move_pages_shared_allocated
+# #!EMBED: cases/move_pages_private
+# #!EMBED: cases/move_pages_private_reserved
+# #!EMBED: cases/move_pages_private_allocated
+# #!EMBED: cases/memory_hotremove_migration_shared
+# #!EMBED: cases/memory_hotremove_migration_private
+# #!EMBED: cases/race_migratepages_and_map_fault_unmap
+# #!EMBED: cases/race_move_pages_and_map_fault_unmap
+# #!EMBED: cases/race_gup_and_migration
+# #!EMBED: cases/hugepage_pingpong_single
+# #!EMBED: cases/hugepage_pingpong_race_with_numa_maps
+# #!EMBED: cases/hugepage_pingpong_race
