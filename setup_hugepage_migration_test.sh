@@ -76,11 +76,12 @@ kill_test_programs() {
     pkill -9 -f $iterate_hugepage_mmap_fault_munmap
     pkill -9 -f $iterate_numa_move_pages
     pkill -9 -f "run_background_migration"
+    return 0
 }
 
 prepare_HM_base() {
     if ! [ "$NUMNODE" -gt 1 ] ; then
-        count_skipped "No NUMA system"
+        echo "No NUMA system" | tee -a ${OFILE}
         return 1
     fi
     kill_test_programs

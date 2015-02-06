@@ -14,6 +14,7 @@ get_numa_maps() { cat /proc/$1/numa_maps; }
 
 kill_test_programs() {
     pkill -9 -f $TESTALLOCTHP
+    return 0
 }
 
 prepare_test() {

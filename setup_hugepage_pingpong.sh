@@ -5,11 +5,12 @@ TESTFILE=${WDIR}/testfile
 
 kill_test_programs() {
     pkill -9 -f $hugepage_pingpong
+    return 0
 }
 
 prepare_hugepage_pingpong() {
     if ! [ "$NUMNODE" -gt 1 ] ; then
-        count_skipped "No NUMA system"
+        echo "No NUMA system" | tee -a ${OFILE}
         return 1
     fi
     kill_test_programs
