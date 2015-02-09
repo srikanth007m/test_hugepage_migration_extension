@@ -16,32 +16,3 @@ NUMNODE=
 . setup_hugepage_pingpong.sh
 
 #!TABLE: hugepage_pingpong.rc.table
-
-# #!EMBED: cases/migratepages_shared
-# #!EMBED: cases/migratepages_shared_reserved
-# #!EMBED: cases/migratepages_shared_allocated
-# #!EMBED: cases/migratepages_private
-# #!EMBED: cases/migratepages_private_reserved
-# #!EMBED: cases/migratepages_private_allocated
-# #!EMBED: cases/migratepages_shared_reserved_overcommit
-# #!EMBED: cases/migratepages_shared_allocated_overcommit
-# #!EMBED: cases/mbind_migration_shared
-# #!EMBED: cases/mbind_migration_shared_reserved
-# #!EMBED: cases/mbind_migration_shared_allocated
-# #!EMBED: cases/mbind_migration_private
-# #!EMBED: cases/mbind_migration_private_reserved
-# #!EMBED: cases/mbind_migration_private_allocated
-# #!EMBED: cases/move_pages_shared
-# #!EMBED: cases/move_pages_shared_reserved
-# #!EMBED: cases/move_pages_shared_allocated
-# #!EMBED: cases/move_pages_private
-# #!EMBED: cases/move_pages_private_reserved
-# #!EMBED: cases/move_pages_private_allocated
-# #!EMBED: cases/memory_hotremove_migration_shared
-# #!EMBED: cases/memory_hotremove_migration_private
-# #!EMBED: cases/race_migratepages_and_map_fault_unmap
-# #!EMBED: cases/race_move_pages_and_map_fault_unmap
-# #!EMBED: cases/race_gup_and_migration
-# #!EMBED: cases/hugepage_pingpong_single
-# #!EMBED: cases/hugepage_pingpong_race_with_numa_maps
-# #!EMBED: cases/hugepage_pingpong_race

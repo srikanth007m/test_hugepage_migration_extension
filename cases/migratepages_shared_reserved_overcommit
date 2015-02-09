@@ -1,5 +1,0 @@
-TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PREPARE=prepare_HM_reserve_overcommit
-TEST_CLEANUP=cleanup_test_hog_hugepages_overcommit
-TEST_CONTROLLER=control_migratepages

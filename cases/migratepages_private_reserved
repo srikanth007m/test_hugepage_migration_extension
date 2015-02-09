@@ -1,6 +1,0 @@
-TEST_PROGRAM="$test_alloc -m private -h $HPSIZE"
-EXPECTED_RETURN_CODE="START MIGRATION_FAILED EXIT"
-TEST_PREPARE=prepare_hugepage_migration_reserve
-TEST_CLEANUP=cleanup_test_hog_hugepages
-TEST_CONTROLLER=control_migratepages
-TEST_CHECKER=check_hugepage_migration_fail

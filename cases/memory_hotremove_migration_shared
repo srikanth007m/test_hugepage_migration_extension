@@ -1,7 +1,0 @@
-TEST_PROGRAM="$hugepage_for_hotremove -m shared -n $[HPNUM \*4/5]"
-EXPECTED_RETURN_CODE="START EXIT"
-TEST_PREPARE=prepare_memory_hotremove_migration
-TEST_CLEANUP=cleanup_memory_hotremove_migration
-TEST_CONTROLLER=control_memory_hotremove_migration
-TEST_CHECKER=check_memory_hotremove_migration
-TEST_RETRYABLE=5
