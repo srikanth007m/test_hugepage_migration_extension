@@ -3,6 +3,7 @@ KERNEL_SRC=/src/linux-dev
 . test_core/lib/setup_mce_tools.sh
 . test_core/lib/setup_hugetlb_base.sh
 . test_core/lib/setup_thp_base.sh
+. test_core/lib/setup_memcg_base.sh
 
 HPSIZE=2048
 HPNUM=100
@@ -10,6 +11,7 @@ HPNUM_FOR_HOTREMOVE=$[MEMTOTAL/HPSIZE/2]
 NUMNODE=
 
 . setup_hugepage_migration_test.sh
+. setup_memcg_consistency.sh
 
 #!TABLE: hugepage_migration.rc.table
 
