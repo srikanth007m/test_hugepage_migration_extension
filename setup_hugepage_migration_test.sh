@@ -87,7 +87,7 @@ prepare_HM_base() {
     kill_test_programs
     hugetlb_empty_check
     get_kernel_message_before
-    sysctl vm.nr_hugepages=$HPNUM
+    set_and_check_hugetlb_pool $HPNUM
 }
 
 prepare_HM_reserve() {
@@ -119,7 +119,6 @@ prepare_memory_hotremove() {
     hugetlb_empty_check
     get_kernel_message_before
     set_and_check_hugetlb_pool $HPNUM_FOR_HOTREMOVE
-    grep Huge /proc/meminfo
 }
 
 cleanup_HM_base() {
@@ -158,6 +157,9 @@ control_migratepages() {
 
     echo "$line" | tee -a ${OFILE}
     case "$line" in
+        "just started")
+            kill -SIGUSR1 $pid
+            ;;
         "entering busy loop")
             get_numa_maps ${pid}   > ${TMPF}.numa_maps1
             echo "do migratepages"
@@ -371,14 +373,19 @@ control_race_gup_and_migration() {
 run_background_migration() {
     local tp_pid=$1
     while true ; do
+        echo migratepages $tp_pid 0 1 >> $TMPF.run_background_migration
         migratepages $tp_pid 0 1 2> /dev/null
-        get_numa_maps $tp_pid    2> /dev/null | grep " huge "
+        get_numa_maps $tp_pid    2> /dev/null | grep " huge " >> $TMPF.run_background_migration
+        grep HugeP /proc/meminfo >> $TMPF.run_background_migration
+        echo migratepages $tp_pid 1 0 >> $TMPF.run_background_migration
         migratepages $tp_pid 1 0 2> /dev/null
-        get_numa_maps $tp_pid    2> /dev/null | grep " huge "
+        get_numa_maps $tp_pid    2> /dev/null | grep " huge " >> $TMPF.run_background_migration
+        grep HugeP /proc/meminfo >> $TMPF.run_background_migration
     done
 }
 
 check_race_gup_and_migration() {
     check_kernel_message_nobug
     check_return_code "${EXPECTED_RETURN_CODE}"
+    # cat $TMPF.run_background_migration
 }

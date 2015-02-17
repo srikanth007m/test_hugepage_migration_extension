@@ -17,6 +17,7 @@
 
 int flag = 1;
 
+void sig_handle(int signo) { ; }
 void sig_handle_flag(int signo) { flag = 0; }
 
 int main(int argc, char *argv[]) {
@@ -77,6 +78,10 @@ int main(int argc, char *argv[]) {
         nodemask = 1; /* only node 0 allowed */
         if (set_mempolicy(MPOL_BIND, &nodemask, nr_nodes) == -1)
                 err("set_mempolicy");
+
+	signal(SIGUSR1, sig_handle);
+	pprintf("just started\n");
+	pause();
 
 	p = mmap((void *)ADDR_INPUT, nr * HPS, protflag, mapflag, -1, 0);
 	if (p == MAP_FAILED) {
