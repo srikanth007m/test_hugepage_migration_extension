@@ -22,17 +22,13 @@ test: all
 test1g: all
 	@bash run-test-1g.sh
 
-install: $(exe)
-	for file in $? ; do \
-	  mv $$file $(dstdir) ; \
-	done
-
 clean:
 	@for file in $(exe) ; do \
-	  rm $(dstdir)/$$file 2> /dev/null ; \
-	  rm $(srcdir)/$$file 2> /dev/null ; \
+	  rm "$(srcdir)/$$file" 2> /dev/null ; \
+	  true ; \
 	done
 
 cleanup: clean
 	@rm -rf work/*
 	@rm -rf results/*
+	@true
