@@ -13,7 +13,7 @@ prepare_hugepage_pingpong() {
         echo "No NUMA system" | tee -a ${OFILE}
         return 1
     fi
-    kill_test_programs
+    kill_test_programs 2> /dev/null
     ipcrm --all > /dev/null 2>&1
     rm -rf ${WDIR}/mount/* 2> /dev/null
     umount -f ${WDIR}/mount 2> /dev/null
@@ -25,7 +25,7 @@ prepare_hugepage_pingpong() {
 }
 
 cleanup_hugepage_pingpong() {
-    kill_test_programs
+    kill_test_programs 2> /dev/null
     ipcrm --all > /dev/null 2>&1
     echo "remove hugetlbfs files" | tee -a ${OFILE}
     rm -rf ${WDIR}/mount/*

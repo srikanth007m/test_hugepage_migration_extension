@@ -15,6 +15,74 @@ NUMNODE=
 
 #!TABLE: hugepage_migration.rc.table
 
+TEST_TITLE=race_migratepages_and_map_fault_unmap
+TEST_PREPARE=prepare_HM_base
+TEST_CLEANUP=cleanup_memory_hotremove
+TEST_CONTROLLER=control_race_migratepages_and_map_fault_unmap
+TEST_CHECKER=check_race_migratepages_and_map_fault_unmap
+EXPECTED_RETURN_CODE="START EXIT"
+FIXEDBY_SUBJECT="mm/hugetlb: add migration entry check in __unmap_hugepage_range|mm/hugetlb: add migration/hwpoisoned entry check in hugetlb_change_protection|mm/hugetlb: fix getting refcount 0 page in hugetlb_fault()|mm/hugetlb: take page table lock in follow_huge_pmd()|mm/hugetlb: pmd_huge() returns true for non-present hugepage"
+FIXEDBY_PATCH_SEARCH_DATE="Feb 10 2015"
+do_test_async
+
+TEST_TITLE=race_move_pages_and_map_fault_unmap
+TEST_PREPARE=prepare_HM_base
+TEST_CLEANUP=cleanup_HM_base
+TEST_CONTROLLER=control_race_move_pages_and_map_fault_unmap
+TEST_CHECKER=check_race_move_pages_and_map_fault_unmap
+EXPECTED_RETURN_CODE="START EXIT"
+FIXEDBY_SUBJECT="mm/hugetlb: add migration entry check in __unmap_hugepage_range|mm/hugetlb: add migration/hwpoisoned entry check in hugetlb_change_protection|mm/hugetlb: fix getting refcount 0 page in hugetlb_fault()|mm/hugetlb: take page table lock in follow_huge_pmd()|mm/hugetlb: pmd_huge() returns true for non-present hugepage"
+FIXEDBY_PATCH_SEARCH_DATE="Feb 10 2015"
+do_test_async
+
+TEST_TITLE=race_gup_and_migration
+TEST_PREPARE=prepare_HM_base
+TEST_CLEANUP=cleanup_race_gup_and_migration
+TEST_CONTROLLER=control_race_gup_and_migration
+TEST_CHECKER=check_race_gup_and_migration
+TEST_PROGRAM="$madvise_hwpoison_hugepages -m private -u -n 30 -h 2048 -l 10"
+EXPECTED_RETURN_CODE="START EXIT"
+FIXEDBY_SUBJECT="mm/hugetlb: add migration entry check in __unmap_hugepage_range|mm/hugetlb: add migration/hwpoisoned entry check in hugetlb_change_protection|mm/hugetlb: fix getting refcount 0 page in hugetlb_fault()|mm/hugetlb: take page table lock in follow_huge_pmd()|mm/hugetlb: pmd_huge() returns true for non-present hugepage"
+FIXEDBY_PATCH_SEARCH_DATE="Feb 10 2015"
+do_test_sync
+
+TEST_TITLE=memcg_consistency
+TEST_PREPARE=prepare_memcg_consistency
+TEST_CLEANUP=cleanup_memcg_consistency
+TEST_CONTROLLER=control_memcg_consistency
+TEST_CHECKER=check_memcg_consistency
+TEST_PROGRAM="$test_alloc -m shared -h $HPSIZE"
+EXPECTED_RETURN_CODE="START EXIT"
+do_test_sync
+
 . setup_hugepage_pingpong.sh
 
 #!TABLE: hugepage_pingpong.rc.table
+
+TEST_TITLE=hugepage_pingpong_race_with_numa_maps
+TEST_PREPARE=prepare_hugepage_pingpong
+TEST_CLEANUP=cleanup_hugepage_pingpong
+TEST_CONTROLLER=control_hugepage_pingpong_race_with_numa_maps
+TEST_CHECKER=check_hugepage_pingpong
+EXPECTED_RETURN_CODE="START EXIT"
+PINGPONG_NR_PROC=2
+PINGPONG_NR_HPS=1
+PINGPONG_ALLOC_TYPES=0xff
+TEST_FLAGS=devel
+FIXEDBY_SUBJECT="mm/hugetlb: add migration entry check in __unmap_hugepage_range|mm/hugetlb: add migration/hwpoisoned entry check in hugetlb_change_protection|mm/hugetlb: fix getting refcount 0 page in hugetlb_fault()|mm/hugetlb: take page table lock in follow_huge_pmd()|mm/hugetlb: pmd_huge() returns true for non-present hugepage"
+FIXEDBY_PATCH_SEARCH_DATE="Feb 10 2015"
+do_test_async
+
+TEST_TITLE=hugepage_pingpong_race
+TEST_PREPARE=prepare_hugepage_pingpong
+TEST_CLEANUP=cleanup_hugepage_pingpong
+TEST_CONTROLLER=control_hugepage_pingpong_race
+TEST_CHECKER=check_hugepage_pingpong
+EXPECTED_RETURN_CODE="START EXIT"
+PINGPONG_NR_PROC=2
+PINGPONG_NR_HPS=1
+PINGPONG_ALLOC_TYPES=0xff
+TEST_FLAGS=devel
+FIXEDBY_SUBJECT="mm/hugetlb: add migration entry check in __unmap_hugepage_range|mm/hugetlb: add migration/hwpoisoned entry check in hugetlb_change_protection|mm/hugetlb: fix getting refcount 0 page in hugetlb_fault()|mm/hugetlb: take page table lock in follow_huge_pmd()|mm/hugetlb: pmd_huge() returns true for non-present hugepage"
+FIXEDBY_PATCH_SEARCH_DATE="Feb 10 2015"
+do_test_async

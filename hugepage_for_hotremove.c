@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 		nr_hps_per_memblk[pfns[i] >> MEMBLK_ORDER] += 1;
 	}
 	for (i = 0; i < MAX_MEMBLK; i++) {
-		if (verbose && nr_hps_per_memblk[i] > 0)
+		if (verbose > 1 && nr_hps_per_memblk[i] > 0)
 			printf("memblock %d: hps %d\n", i, nr_hps_per_memblk[i]);
 		if (nr_hps_per_memblk[i] > max_nr_hps) {
 			max_nr_hps = nr_hps_per_memblk[i];

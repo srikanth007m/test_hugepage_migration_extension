@@ -18,14 +18,14 @@ kill_test_programs() {
 }
 
 prepare_test() {
-    kill_test_programs
+    kill_test_programs 2> /dev/null
     get_kernel_message_before
 }
 
 cleanup_test() {
     get_kernel_message_after
     get_kernel_message_diff | tee -a ${OFILE}
-    kill_test_programs
+    kill_test_programs 2> /dev/null
 }
 
 control_thp_migration_auto_numa() {

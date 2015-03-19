@@ -84,7 +84,7 @@ prepare_HM_base() {
         echo "No NUMA system" | tee -a ${OFILE}
         return 1
     fi
-    kill_test_programs
+    kill_test_programs 2> /dev/null
     hugetlb_empty_check
     get_kernel_message_before
     set_and_check_hugetlb_pool $HPNUM
@@ -115,7 +115,7 @@ prepare_HM_allocate_overcommit() {
 # memory hotremove could happen even on non numa system, so let's test it.
 prepare_memory_hotremove() {
     PIPETIMEOUT=30
-    kill_test_programs
+    kill_test_programs 2> /dev/null
     hugetlb_empty_check
     get_kernel_message_before
     set_and_check_hugetlb_pool $HPNUM_FOR_HOTREMOVE
@@ -124,7 +124,7 @@ prepare_memory_hotremove() {
 cleanup_HM_base() {
     get_kernel_message_after
     get_kernel_message_diff | tee -a ${OFILE}
-    kill_test_programs
+    kill_test_programs 2> /dev/null
     sysctl vm.nr_hugepages=0
     hugetlb_empty_check
 }
