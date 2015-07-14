@@ -114,6 +114,10 @@ prepare_HM_allocate_overcommit() {
 
 # memory hotremove could happen even on non numa system, so let's test it.
 prepare_memory_hotremove() {
+    if ! [ "$NUMNODE" -gt 1 ] ; then
+        echo "No NUMA system" | tee -a ${OFILE}
+        return 1
+    fi
     PIPETIMEOUT=30
     kill_test_programs 2> /dev/null
     hugetlb_empty_check
